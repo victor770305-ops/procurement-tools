@@ -66,6 +66,8 @@ function ellipsoid(mat: THREE.Material, rx: number, ry: number, rz: number, x = 
   return m;
 }
 
+export const typeById = (id: string) => PLUSH_TYPES.find((t) => t.id === id) ?? PLUSH_TYPES[0];
+
 export function pickRarity(): Rarity {
   const r = Math.random();
   if (r < 0.05) return 'ssr';

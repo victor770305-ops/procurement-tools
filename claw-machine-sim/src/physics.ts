@@ -1,12 +1,14 @@
 import RAPIER from '@dimforge/rapier3d-compat';
 import * as THREE from 'three';
 import { CHUTE, FIELD, Rarity } from './config';
-import { buildPlush, pickRarity, PLUSH_BODY_R, PLUSH_HEAD_R, PLUSH_HEAD_Y, PLUSH_TYPES, PlushType } from './plush';
+import { PLUSH_COST, StockItem } from './economy';
+import { buildPlush, pickRarity, PLUSH_BODY_R, PLUSH_HEAD_R, PLUSH_HEAD_Y, PLUSH_TYPES, PlushType, typeById } from './plush';
 
 export interface PlushEntity {
   id: number;
   type: PlushType;
   rarity: Rarity;
+  cost: number;
   mesh: THREE.Group;
   body: RAPIER.RigidBody;
   won: boolean;
@@ -41,6 +43,9 @@ export class Physics {
     this.fixed(cw, 0.05, cd, -halfX + cw, -CHUTE.depth - 0.05, CHUTE.z0 + cd);
     this.fixed(0.02, CHUTE.depth / 2, cd, CHUTE.x1 + 0.02, -CHUTE.depth / 2, CHUTE.z0 + cd);
     this.fixed(cw, CHUTE.depth / 2, 0.02, -halfX + cw, -CHUTE.depth / 2, CHUTE.z0 - 0.02);
+    // 出口矮擋板:娃娃要被夾到出口上方放開才算數,不能被推進去
+    this.fixed(0.02, 0.07, cd, CHUTE.x1 + 0.02, 0.07, CHUTE.z0 + cd, 0.4);
+    this.fixed(cw, 0.07, 0.02, -halfX + cw, 0.07, CHUTE.z0 - 0.02, 0.4);
     // 四周玻璃 / 背板
     const h = FIELD.height / 2 + CHUTE.depth / 2;
     const cy = FIELD.height / 2 - CHUTE.depth / 2;
@@ -68,22 +73,22 @@ export class Physics {
     this.world.createCollider(common(RAPIER.ColliderDesc.ball(PLUSH_BODY_R)), body);
     this.world.createCollider(common(RAPIER.ColliderDesc.ball(PLUSH_HEAD_R)).setTranslation(0, PLUSH_HEAD_Y, 0.01), body);
     const mesh = buildPlush(type, rarity);
-    const e: PlushEntity = { id: this.nextId++, type, rarity, mesh, body, won: false, wonAt: 0 };
+    const e: PlushEntity = { id: this.nextId++, type, rarity, cost: PLUSH_COST[rarity], mesh, body, won: false, wonAt: 0 };
     this.plushes.push(e);
     return e;
   }
 
   /** 開局時讓娃娃從上方陸續掉落、堆疊靜止 */
-  fillMachine(count: number) {
+  fillItems(items: StockItem[]) {
     const spawned: PlushEntity[] = [];
-    for (let i = 0; i < count; i++) {
+    for (let i = 0; i < items.length; i++) {
       let x = 0;
       let z = 0;
       do {
         x = (Math.random() * 2 - 1) * (FIELD.halfX - 0.14);
         z = (Math.random() * 2 - 1) * (FIELD.halfZ - 0.14);
-      } while (x < CHUTE.x1 + 0.17 && z > CHUTE.z0 - 0.17);
-      spawned.push(this.spawnPlush(x, 0.6 + (i % 3) * 0.3, z));
+      } while (x < CHUTE.x1 + 0.3 && z > CHUTE.z0 - 0.3);
+      spawned.push(this.spawnPlush(x, 0.6 + (i % 3) * 0.3, z, typeById(items[i].typeId), items[i].rarity));
       for (let s = 0; s < 8; s++) this.world.step();
     }
     for (let s = 0; s < 420; s++) this.world.step();
@@ -94,6 +99,23 @@ export class Physics {
       p.body.setLinvel({ x: 0, y: 0, z: 0 }, false);
       p.body.setAngvel({ x: 0, y: 0, z: 0 }, false);
     }
+  }
+
+  /** 補貨:從上方丟入新娃娃,回傳新實體(呼叫端負責加入場景) */
+  dropIn(items: StockItem[]): PlushEntity[] {
+    return items.map((it, i) => {
+      let x = 0;
+      let z = 0;
+      do {
+        x = (Math.random() * 2 - 1) * (FIELD.halfX - 0.14);
+        z = (Math.random() * 2 - 1) * (FIELD.halfZ - 0.14);
+      } while (x < CHUTE.x1 + 0.3 && z > CHUTE.z0 - 0.3);
+      return this.spawnPlush(x, 0.95 + i * 0.12, z, typeById(it.typeId), it.rarity);
+    });
+  }
+
+  stockItems(): StockItem[] {
+    return this.plushes.filter((p) => !p.won).map((p) => ({ typeId: p.type.id, rarity: p.rarity }));
   }
 
   syncMeshes() {

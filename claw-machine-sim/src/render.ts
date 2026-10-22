@@ -11,7 +11,7 @@ export const isMobile = matchMedia('(pointer: coarse)').matches || Math.min(inne
 export type CamPreset = 'front' | 'side' | 'top';
 
 const PRESETS: Record<CamPreset, { dir: THREE.Vector3; dist: number; target: THREE.Vector3; halfW: number }> = {
-  front: { dir: new THREE.Vector3(0, 0.12, 1).normalize(), dist: 6.0, target: new THREE.Vector3(0, 1.62, 0.2), halfW: 1.3 },
+  front: { dir: new THREE.Vector3(0, 0.12, 1).normalize(), dist: 6.5, target: new THREE.Vector3(0, 1.5, 0.3), halfW: 1.3 },
   side: { dir: new THREE.Vector3(1, 0.2, 0.18).normalize(), dist: 4.6, target: new THREE.Vector3(0, BASE_HEIGHT + 0.8, 0.1), halfW: 1.0 },
   top: { dir: new THREE.Vector3(0, 0.62, 1).normalize(), dist: 3.7, target: new THREE.Vector3(0, BASE_HEIGHT + 0.55, 0.25), halfW: 1.0 },
 };

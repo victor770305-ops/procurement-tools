@@ -24,6 +24,7 @@ export class Cabinet {
   private trolley!: THREE.Mesh;
   private rope!: THREE.Mesh;
   private joyStick = new THREE.Group();
+  private joyBall!: THREE.Mesh;
   private dropBtn!: THREE.Mesh;
   private dropMat!: THREE.MeshStandardMaterial;
   private leds!: THREE.InstancedMesh;
@@ -136,6 +137,9 @@ export class Cabinet {
     this.box(cw, 0.05, cd, new THREE.MeshStandardMaterial({ color: 0x2a1740, roughness: 0.7 }), cx, -CHUTE.depth - 0.025, cz);
     this.box(0.03, CHUTE.depth, cd, chuteMat, CHUTE.x1 + 0.015, -CHUTE.depth / 2, cz);
     this.box(cw, CHUTE.depth, 0.03, chuteMat, cx, -CHUTE.depth / 2, CHUTE.z0 + 0.015);
+    // 出口擋板
+    this.box(0.04, 0.14, cd, mat.chrome, CHUTE.x1 + 0.02, 0.07, cz);
+    this.box(cw, 0.14, 0.04, mat.chrome, cx, 0.07, CHUTE.z0 - 0.02);
     // 出口邊框的發光環
     const ring = new THREE.Mesh(
       new THREE.PlaneGeometry(cw, cd),
@@ -148,13 +152,13 @@ export class Cabinet {
       new THREE.BoxGeometry(cw + 0.04, 0.012, 0.012),
       new THREE.MeshBasicMaterial({ color: new THREE.Color(0.2, 2.2, 2.6), toneMapped: false }),
     );
-    rim.position.set(cx, 0.006, CHUTE.z0);
+    rim.position.set(cx, 0.146, CHUTE.z0 - 0.02);
     this.group.add(rim);
     const rim2 = new THREE.Mesh(
       new THREE.BoxGeometry(0.012, 0.012, cd),
       new THREE.MeshBasicMaterial({ color: new THREE.Color(0.2, 2.2, 2.6), toneMapped: false }),
     );
-    rim2.position.set(CHUTE.x1, 0.006, cz);
+    rim2.position.set(CHUTE.x1 + 0.02, 0.146, cz);
     this.group.add(rim2);
     const chuteLight = new THREE.PointLight(0x7ffcff, 1.2, 1.2, 2);
     chuteLight.position.set(cx, -0.2, cz);
@@ -218,29 +222,29 @@ export class Cabinet {
     this.box(1.5, 0.062, 0.36, new THREE.MeshPhysicalMaterial({ color: 0x0f1230, roughness: 0.4, metalness: 0.3, clearcoat: 1 }), 0, 0.001, 0, plate);
 
     // 搖桿
-    const jx = -0.4;
+    const jx = 0.3;
     this.add(new THREE.CylinderGeometry(0.075, 0.085, 0.03, 32), mat.chrome, jx, 0.04, 0, plate);
     this.joyStick.position.set(jx, 0.05, 0);
     plate.add(this.joyStick);
     const shaft = this.add(new THREE.CylinderGeometry(0.011, 0.011, 0.17, 12), mat.chrome, 0, 0.085, 0, this.joyStick);
     const ballMat = new THREE.MeshPhysicalMaterial({ color: 0xe5173f, roughness: 0.2, clearcoat: 1, clearcoatRoughness: 0.05 });
-    this.add(new THREE.SphereGeometry(0.048, 32, 24), ballMat, 0, 0.19, 0, this.joyStick);
+    this.joyBall = this.add(new THREE.SphereGeometry(0.048, 32, 24), ballMat, 0, 0.19, 0, this.joyStick);
     shaft.castShadow = true;
 
     // 抓取按鈕
-    const bx = 0.4;
+    const bx = 0.62;
     this.add(new THREE.CylinderGeometry(0.095, 0.1, 0.04, 40), mat.chrome, bx, 0.04, 0, plate);
     this.dropMat = new THREE.MeshStandardMaterial({ color: 0xff3a3a, emissive: 0xff1010, emissiveIntensity: 0.25, roughness: 0.25 });
     this.dropBtn = this.add(new THREE.CylinderGeometry(0.075, 0.08, 0.045, 40), this.dropMat, bx, 0.075, 0, plate);
 
     // 投幣孔 + 螢幕
-    this.box(0.09, 0.012, 0.14, mat.dark, 0, 0.034, 0.1, plate);
-    this.box(0.012, 0.014, 0.1, new THREE.MeshBasicMaterial({ color: new THREE.Color(2.2, 1.7, 0.2), toneMapped: false }), 0, 0.04, 0.1, plate);
+    this.box(0.09, 0.012, 0.14, mat.dark, -0.4, 0.034, 0.1, plate);
+    this.box(0.012, 0.014, 0.1, new THREE.MeshBasicMaterial({ color: new THREE.Color(2.2, 1.7, 0.2), toneMapped: false }), -0.4, 0.04, 0.1, plate);
     const scr = new THREE.Mesh(new THREE.PlaneGeometry(0.34, 0.128), new THREE.MeshBasicMaterial({ map: this.display.texture, toneMapped: false }));
     scr.rotation.x = -Math.PI / 2;
-    scr.position.set(0, 0.0345, -0.1);
+    scr.position.set(-0.4, 0.0345, -0.1);
     plate.add(scr);
-    this.setCredits(0);
+    this.setDisplay('CREDIT', '000');
 
     // 前方取物口
     this.box(0.5, 0.36, 0.02, mat.dark, -0.55, -0.62, 1.12);
@@ -277,8 +281,16 @@ export class Cabinet {
     this.group.add(this.leds);
   }
 
-  setCredits(n: number) {
-    this.display.draw('CREDIT', String(n).padStart(3, '0'));
+  setDisplay(label: string, value: string) {
+    this.display.draw(label, value);
+  }
+
+  /** 搖桿頂端 / 按鈕的世界座標(給顧客的手伸向) */
+  joystickWorld(out: THREE.Vector3) {
+    return this.joyBall.getWorldPosition(out);
+  }
+  buttonWorld(out: THREE.Vector3) {
+    return this.dropBtn.getWorldPosition(out);
   }
 
   /** 設定爪頭位置,同步橫樑、台車與吊繩 */

@@ -228,11 +228,12 @@ export class ClawRig {
       return Math.hypot(t.x - this.pos.x, t.z - this.pos.z) < 0.17 && dy > 0.05 && dy < 0.55;
     });
     this.held.sort((a, b) => b.body.translation().y - a.body.translation().y);
-    this.held = this.held.slice(0, 2);
+    this.held = this.held.slice(0, 1);
     this.liftT = 0;
     this.slipped = false;
     // 爪力決定「半途掉落」發生的機率與時機
-    this.slipAt = Math.random() < this.strength ? Infinity : 0.3 + Math.random() * 2.4;
+    const hold = Math.pow(this.strength, 1.4) * 0.75;
+    this.slipAt = Math.random() < hold ? Infinity : 0.2 + Math.random() * 1.6;
     if (this.held.length) this.events.onGrab?.(this.held.length);
     this.setState('lift');
   }
@@ -245,7 +246,7 @@ export class ClawRig {
       this.events.onSlip?.();
     }
     if (this.slipped) {
-      this.phi = Math.min(PHI_CLOSED + 0.38, this.phi + 0.9 * dt);
+      this.phi = Math.min(PHI_OPEN, this.phi + 3 * dt);
       return;
     }
     const gripFactor = 0.55 + 0.45 * this.strength;

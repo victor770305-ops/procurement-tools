@@ -49,6 +49,7 @@
 
     #controls { position: absolute; left: 0; right: 0; bottom: 0; padding: 0 max(18px, env(safe-area-inset-right)) max(18px, env(safe-area-inset-bottom)) max(18px, env(safe-area-inset-left)); display: flex; justify-content: space-between; align-items: flex-end; pointer-events: none; }
     #controls > * { pointer-events: auto; }
+    #controls[hidden] { display: none; }
     #joy { width: 132px; height: 132px; border-radius: 50%; position: relative; display: grid; place-items: center; touch-action: none; }
     #joy::before { content: ''; position: absolute; inset: 0; border-radius: 50%; background: radial-gradient(circle, rgba(255, 255, 255, 0.08), rgba(255, 255, 255, 0.02)); border: 1px solid var(--line); }
     #joy .arrow { position: absolute; color: rgba(255, 255, 255, 0.35); font-size: 12px; }
@@ -93,47 +94,150 @@
       #dropbtn { width: 94px; height: 94px; }
       #start { bottom: 19%; font-size: 17px; padding: 14px 24px; }
     }
+
+    /* ---------- P2:經營介面 ---------- */
+    .chip .bar { position: absolute; left: 10px; right: 10px; bottom: 4px; height: 3px; border-radius: 2px; background: rgba(255,255,255,0.12); overflow: hidden; }
+    .chip .bar i { display: block; height: 100%; width: 0; background: linear-gradient(90deg, var(--cyan), var(--pink)); transition: width 0.3s linear; }
+    .chip.clock { position: relative; padding-bottom: 12px; min-width: 112px; }
+    #cashChip.neg span#cash { color: #ff6b6b; }
+
+    #dock { position: absolute; left: 50%; bottom: 7%; transform: translateX(-50%); display: flex; gap: 10px; align-items: center; pointer-events: none; }
+    #dock > * { pointer-events: auto; }
+    #hud:not([data-phase="prep"]) .only-prep { display: none !important; }
+    #hud:not([data-phase="open"]):not([data-phase="closing"]) .only-open { display: none !important; }
+    .cta { padding: 15px 26px; font-size: 18px; font-weight: 800; color: #fff; border: 0; border-radius: 999px; cursor: pointer; font-family: inherit; white-space: nowrap;
+      background: linear-gradient(135deg, #ff3d9a, #ff7a3d); box-shadow: 0 8px 30px rgba(255, 61, 154, 0.5), inset 0 1px 0 rgba(255, 255, 255, 0.4); }
+    .cta.ghost { background: var(--glass); border: 1px solid var(--line); box-shadow: none; backdrop-filter: blur(14px); -webkit-backdrop-filter: blur(14px); }
+    .cta small { display: block; font-size: 11px; font-weight: 500; opacity: 0.85; margin-top: 2px; }
+    .cta:active { transform: scale(0.96); }
+    .cta:disabled { opacity: 0.5; }
+    .seg { display: flex; padding: 4px; gap: 4px; border-radius: 999px; }
+    .seg button { border: 0; background: transparent; color: var(--muted); font-weight: 800; font-family: inherit; font-size: 15px; padding: 8px 14px; border-radius: 999px; cursor: pointer; }
+    .seg button.on { background: linear-gradient(135deg, #41e8ff, #7a6bff); color: #06101f; }
+    #queueInfo { padding: 10px 14px; font-size: 13px; font-weight: 700; border-radius: 999px; white-space: nowrap; }
+
+    #bubbles { position: absolute; inset: 0; pointer-events: none !important; overflow: hidden; }
+    .bubble { position: absolute; transform: translate(-50%, -100%); padding: 5px 10px; border-radius: 12px; font-size: 13px; font-weight: 800; white-space: nowrap; color: #14102a; background: rgba(255,255,255,0.94); box-shadow: 0 4px 14px rgba(0,0,0,0.35); }
+    .bubble::after { content: ''; position: absolute; left: 50%; bottom: -5px; width: 10px; height: 10px; background: inherit; transform: translateX(-50%) rotate(45deg); border-radius: 2px; }
+    .bubble .who { display: block; font-size: 10px; font-weight: 600; opacity: 0.6; }
+
+    #settings { width: 262px; }
+    #settings .sub { margin: 14px 0 6px; font-size: 12px; color: var(--cyan); letter-spacing: 1px; }
+    #settings .hintline { color: var(--muted); font-size: 11.5px; margin-top: 4px; line-height: 1.4; }
+    .mini { color: inherit; padding: 7px 11px; cursor: pointer; font-family: inherit; font-size: 12px; border-radius: 10px; }
+
+    .modal { position: fixed; inset: 0; z-index: 8; display: grid; place-items: center; padding: 16px; background: rgba(5, 3, 14, 0.62); backdrop-filter: blur(4px); -webkit-backdrop-filter: blur(4px); pointer-events: auto !important; }
+    .modal[hidden] { display: none; }
+    .sheet { width: min(460px, 100%); max-height: 88%; overflow: auto; touch-action: pan-y; padding: 20px; background: rgba(20, 15, 42, 0.92); border: 1px solid var(--line); border-radius: 20px; box-shadow: 0 20px 60px rgba(0,0,0,0.5); }
+    .sheet h2 { margin: 0 0 4px; font-size: 20px; }
+    .sheet .sub2 { color: var(--muted); font-size: 13px; margin-bottom: 14px; }
+    .row2 { display: flex; justify-content: space-between; gap: 10px; padding: 8px 0; border-bottom: 1px solid rgba(255,255,255,0.07); font-size: 14px; font-variant-numeric: tabular-nums; }
+    .row2:last-child { border-bottom: 0; }
+    .row2 b.pos { color: #5fe3a1; } .row2 b.neg { color: #ff6b6b; }
+    .row2.total { font-size: 17px; font-weight: 800; border-top: 1px solid var(--line); margin-top: 4px; }
+    .pack { display: flex; justify-content: space-between; align-items: center; gap: 10px; padding: 12px 14px; margin-bottom: 8px; border-radius: 14px; background: rgba(255,255,255,0.05); border: 1px solid var(--line); }
+    .pack b { display: block; font-size: 15px; } .pack span { font-size: 12px; color: var(--muted); }
+    .pack button, .sheet .act { border: 0; border-radius: 12px; padding: 10px 14px; font-weight: 800; font-family: inherit; font-size: 14px; cursor: pointer; color: #fff; background: linear-gradient(135deg, #ff3d9a, #ff7a3d); white-space: nowrap; }
+    .sheet .act.alt { background: linear-gradient(135deg, #41e8ff, #7a6bff); color: #06101f; }
+    .sheet .act:disabled, .pack button:disabled { opacity: 0.4; }
+    .sheet .foot { display: flex; gap: 8px; margin-top: 14px; }
+    .sheet .foot .act { flex: 1; padding: 13px; }
+    .stars { font-size: 22px; letter-spacing: 3px; margin: 2px 0 10px; }
+    .tip { margin-top: 12px; padding: 10px 12px; border-radius: 12px; background: rgba(65,232,255,0.08); border: 1px solid rgba(65,232,255,0.25); font-size: 13px; line-height: 1.5; }
+
+    @media (max-width: 520px) {
+      #top { flex-wrap: wrap; row-gap: 6px; }
+      .chip span#cash, .chip span#rep, .chip span#clock { white-space: nowrap; }
+      #msg { top: auto !important; bottom: 17%; }
+      .prize:nth-child(n+3) { display: none; }
+      .prize { font-size: 12px; padding: 5px 10px; }
+      #dock { bottom: 6%; gap: 8px; }
+      .cta { padding: 13px 20px; font-size: 16px; }
+      .chip.clock { min-width: 0; }
+      .seg button { padding: 7px 11px; }
+      #settings { width: min(262px, calc(100vw - 16px)); }
+    }
   </style>
 </head>
 <body>
   <canvas id="view"></canvas>
 
-  <div id="hud">
+  <div id="hud" data-phase="prep">
     <div id="top">
       <div class="stats">
-        <div class="panel chip"><span class="ico">🪙</span><div><small>代幣</small><span id="coins">10</span></div></div>
-        <div class="panel chip"><span class="ico">🧸</span><div><small>戰利品</small><span id="prizeCount">0</span></div></div>
-        <div class="panel chip" id="timer"><span class="ico">⏱</span><div><small>倒數</small><span id="time">--</span></div></div>
+        <div class="panel chip" id="cashChip"><span class="ico">💰</span><div><small>現金</small><span id="cash">1,000</span></div></div>
+        <div class="panel chip"><span class="ico">⭐</span><div><small>聲望</small><span id="rep">2.5</span></div></div>
+        <div class="panel chip clock"><span class="ico">📅</span><div><small id="dayLabel">第 1 天</small><span id="clock">10:00</span></div><div class="bar"><i id="dayBar"></i></div></div>
       </div>
       <div class="btns">
         <button class="panel icon-btn" id="btnCam" title="切換視角">🎥</button>
-        <button class="panel icon-btn" id="btnCfg" title="機台設定">⚙️</button>
+        <button class="panel icon-btn" id="btnShop" title="進貨與上架">🛒</button>
+        <button class="panel icon-btn" id="btnCfg" title="營運設定">⚙️</button>
         <button class="panel icon-btn" id="btnSnd" title="音效">🔊</button>
       </div>
     </div>
 
     <div id="settings" class="panel" hidden>
-      <h3>機台營運設定（預覽）</h3>
-      <label><span>爪力</span><b id="strVal">55%</b></label>
-      <input type="range" id="strength" min="15" max="95" value="55" />
-      <div class="row"><span>預估成功率</span><b id="winRate">55%</b></div>
-      <div class="row"><span>單次投幣</span><b>1 🪙</b></div>
-      <div class="row"><span>場內娃娃</span><b id="stock">0</b></div>
-      <div class="row"><button id="btnRefill" class="panel" style="color:inherit;padding:6px 10px;cursor:pointer;font-family:inherit">補貨</button><button id="btnCoin" class="panel" style="color:inherit;padding:6px 10px;cursor:pointer;font-family:inherit">+10 代幣</button></div>
+      <h3>營運設定</h3>
+      <label><span>單次售價</span><b id="priceVal">NT$ 20</b></label>
+      <input type="range" id="price" min="10" max="50" step="5" value="20" />
+      <div class="hintline" id="priceHint"></div>
+      <label><span>爪力</span><b id="strVal">50%</b></label>
+      <input type="range" id="strength" min="15" max="95" value="50" />
+      <div class="hintline" id="strHint"></div>
+      <div class="sub">庫存</div>
+      <div class="row"><span>機台內</span><b id="mStock">0</b></div>
+      <div class="row"><span>倉庫</span><b id="wStock">0</b></div>
+      <div class="sub">今日營業</div>
+      <div class="row"><span>顧客</span><b id="sCust">0</b></div>
+      <div class="row"><span>遊玩次數</span><b id="sPlays">0</b></div>
+      <div class="row"><span>中獎 / 成功率</span><b id="sWins">0</b></div>
+      <div class="row"><span>營收</span><b id="sRev">NT$ 0</b></div>
+      <div class="row" style="margin-top:12px"><button id="btnReset" class="panel mini">重新開始</button></div>
     </div>
 
     <div id="prizes"></div>
+    <div id="bubbles"></div>
     <div id="msg" class="panel"></div>
-    <button id="start">投幣開始<small>1 🪙 / 次 · 空白鍵</small></button>
 
-    <div id="controls">
+    <div id="dock">
+      <div class="only-prep" style="display:flex;gap:10px">
+        <button class="cta ghost" id="btnTest">試玩<small>免費 · 空白鍵</small></button>
+        <button class="cta" id="btnOpen">開店營業<small>第 <span id="dockDay">1</span> 天</small></button>
+      </div>
+      <div class="only-open" style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;justify-content:center">
+        <div class="panel seg" id="speed"><button data-s="1">1×</button><button data-s="2">2×</button><button data-s="4">4×</button></div>
+        <div class="panel" id="queueInfo">排隊 0 人</div>
+      </div>
+    </div>
+
+    <div id="controls" hidden>
       <div id="joy"><span class="arrow" style="top:8px">▲</span><span class="arrow" style="bottom:8px">▼</span><span class="arrow" style="left:10px">◀</span><span class="arrow" style="right:10px">▶</span><div id="knob"></div></div>
       <button id="dropbtn">放爪</button>
     </div>
-    <div class="hint">方向鍵 / WASD 移動 · 空白鍵放爪 · 也可用畫面搖桿</div>
+    <div class="hint only-prep">方向鍵 / WASD 移動 · 空白鍵放爪</div>
+
+    <div id="shop" class="modal" hidden>
+      <div class="sheet">
+        <h2>進貨與上架</h2>
+        <div class="sub2" id="shopInfo"></div>
+        <div id="packList"></div>
+        <div class="foot"><button class="act alt" id="btnShelve">上架到機台</button><button class="act" id="btnShopClose" style="background:rgba(255,255,255,0.12)">關閉</button></div>
+      </div>
+    </div>
+
+    <div id="report" class="modal" hidden>
+      <div class="sheet">
+        <h2 id="reportTitle">營業報告</h2>
+        <div class="stars" id="reportStars"></div>
+        <div id="reportBody"></div>
+        <div class="tip" id="reportTip"></div>
+        <div class="foot"><button class="act" id="btnNext">進入下一天</button></div>
+      </div>
+    </div>
   </div>
 
-  <div id="loading"><div><div class="logo">CLAW CLUB</div><p>正在整理娃娃…</p></div></div>
+  <div id="loading"><div><div class="logo">CLAW CLUB</div><p>正在整理店面…</p></div></div>
   <script type="module" src="/src/main.ts"></script>
 </body>
 </html>
