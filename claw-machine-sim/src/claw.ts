@@ -109,6 +109,17 @@ export class ClawRig {
     this.events.onState?.(s);
   }
 
+  /** 故障等狀況:強制停止並回到待機位 */
+  reset() {
+    this.held = [];
+    this.vel.set(0, 0);
+    this.phi = PHI_OPEN;
+    this.pos.set(HOME.x, CLAW.topY, HOME.z);
+    this.state = 'idle';
+    this.t = 0;
+    this.applyPose();
+  }
+
   /** 投幣後開始操作 */
   begin() {
     if (this.state !== 'idle') return;

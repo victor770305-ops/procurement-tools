@@ -281,6 +281,20 @@ export class Cabinet {
     this.group.add(this.leds);
   }
 
+  /** 釋放這台機台獨有的資源(貼圖與外殼材質共用快取,不在這裡釋放) */
+  dispose() {
+    this.group.traverse((o) => {
+      const m = o as THREE.Mesh;
+      if (m.isMesh || (o as THREE.InstancedMesh).isInstancedMesh) {
+        m.geometry.dispose();
+        const mats = Array.isArray(m.material) ? m.material : [m.material];
+        for (const mt of mats) mt.dispose();
+      }
+    });
+    this.display.texture.dispose();
+    (this.leds as THREE.InstancedMesh).dispose();
+  }
+
   setDisplay(label: string, value: string) {
     this.display.draw(label, value);
   }
@@ -315,7 +329,7 @@ export class Cabinet {
     // LED 流水燈(彩虹)
     for (let i = 0; i < this.ledCount; i++) {
       const h = (t * 0.12 + i * 0.022) % 1;
-      this.tmpColor.setHSL(h, 1, 0.5).multiplyScalar(2.4);
+      this.tmpColor.setHSL(h, 0.9, 0.5).multiplyScalar(1.5);
       this.leds.setColorAt(i, this.tmpColor);
     }
     this.leds.instanceColor!.needsUpdate = true;

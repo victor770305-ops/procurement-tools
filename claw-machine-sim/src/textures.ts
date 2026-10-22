@@ -41,7 +41,7 @@ export function furBumpTexture() {
 }
 
 /** 夾物區地板:菱形防滑鋼板 */
-export function diamondPlateTexture() {
+function make_diamondPlateTexture() {
   const { c, g } = canvas(256, 256);
   g.fillStyle = '#2b3150';
   g.fillRect(0, 0, 256, 256);
@@ -118,7 +118,7 @@ export function neonTexture(text: string, color: string, w = 1024, h = 256, font
 }
 
 /** 機台頂部招牌 */
-export function marqueeTexture(title = 'CLAW CLUB', sub = '夾 娃 娃 樂 園', hue = 320) {
+function make_marqueeTexture(title: string, sub: string, hue: number) {
   const { c, g } = canvas(1024, 384);
   const bg = g.createLinearGradient(0, 0, 1024, 384);
   bg.addColorStop(0, `hsl(${(hue + 250) % 360} 70% 14%)`);
@@ -158,7 +158,7 @@ export function marqueeTexture(title = 'CLAW CLUB', sub = '夾 娃 娃 樂 園',
 }
 
 /** 機台後方的星空背板 */
-export function backdropTexture() {
+function make_backdropTexture() {
   const { c, g } = canvas(512, 512);
   const bg = g.createLinearGradient(0, 0, 0, 512);
   bg.addColorStop(0, '#1d1450');
@@ -182,7 +182,7 @@ export function backdropTexture() {
 }
 
 /** 玻璃反光條 */
-export function glareTexture() {
+function make_glareTexture() {
   const { c, g } = canvas(512, 512);
   g.clearRect(0, 0, 512, 512);
   g.save();
@@ -244,4 +244,109 @@ export function makeDisplay() {
     t.needsUpdate = true;
   };
   return { texture: t, draw };
+}
+
+// 這些貼圖整店共用,切換機台細節層時不需要重畫
+const memo = new Map<string, THREE.CanvasTexture>();
+const cached = (key: string, make: () => THREE.CanvasTexture) => {
+  let t = memo.get(key);
+  if (!t) {
+    t = make();
+    memo.set(key, t);
+  }
+  return t;
+};
+export const diamondPlateTexture = () => cached('diamond', make_diamondPlateTexture);
+export const backdropTexture = () => cached('backdrop', make_backdropTexture);
+export const glareTexture = () => cached('glare', make_glareTexture);
+export const marqueeTexture = (title = 'CLAW CLUB', sub = '夾 娃 娃 樂 園', hue = 320) => cached(`marquee:${title}:${hue}`, () => make_marqueeTexture(title, sub, hue));
+
+/** 遊樂場常見的圖案地毯:深色底、低對比的幾何圖形 */
+export function carpetTexture() {
+  const { c, g } = canvas(512, 512);
+  g.fillStyle = '#2a2a42';
+  g.fillRect(0, 0, 512, 512);
+  const cols = ['#c64e7c', '#2f9fb8', '#d6a93c', '#6c58c8', '#37a778'];
+  for (let i = 0; i < 90; i++) {
+    const x = rnd(0, 512);
+    const y = rnd(0, 512);
+    const s = rnd(8, 22);
+    g.save();
+    g.translate(x, y);
+    g.rotate(rnd(0, Math.PI));
+    g.globalAlpha = rnd(0.2, 0.42);
+    g.fillStyle = cols[Math.floor(Math.random() * cols.length)];
+    const kind = Math.floor(Math.random() * 3);
+    if (kind === 0) g.fillRect(-s / 2, -s / 2, s, s);
+    else if (kind === 1) {
+      g.beginPath();
+      g.moveTo(0, -s);
+      g.lineTo(s, s);
+      g.lineTo(-s, s);
+      g.closePath();
+      g.fill();
+    } else {
+      g.beginPath();
+      g.arc(0, 0, s / 2, 0, Math.PI * 2);
+      g.fill();
+    }
+    g.restore();
+  }
+  // 織紋雜訊
+  for (let i = 0; i < 14000; i++) {
+    g.fillStyle = `rgba(255,255,255,${rnd(0.01, 0.045)})`;
+    g.fillRect(rnd(0, 512), rnd(0, 512), 1.5, 1.5);
+  }
+  const t = tex(c);
+  t.wrapS = t.wrapT = THREE.RepeatWrapping;
+  return t;
+}
+
+/** 走道與前廳的拋光磁磚:淺暖灰、細縫 */
+export function aisleTileTexture() {
+  const { c, g } = canvas(512, 512);
+  g.fillStyle = '#b9b4ac';
+  g.fillRect(0, 0, 512, 512);
+  for (let y = 0; y < 4; y++) {
+    for (let x = 0; x < 4; x++) {
+      const v = 176 + Math.floor(rnd(-8, 8));
+      g.fillStyle = `rgb(${v + 6},${v},${v - 8})`;
+      g.fillRect(x * 128 + 2, y * 128 + 2, 124, 124);
+      // 大理石紋
+      g.strokeStyle = `rgba(120,115,108,${rnd(0.05, 0.12)})`;
+      g.lineWidth = rnd(0.5, 1.5);
+      g.beginPath();
+      g.moveTo(x * 128 + rnd(0, 128), y * 128);
+      g.bezierCurveTo(x * 128 + rnd(0, 128), y * 128 + 40, x * 128 + rnd(0, 128), y * 128 + 90, x * 128 + rnd(0, 128), y * 128 + 128);
+      g.stroke();
+    }
+  }
+  const t = tex(c);
+  t.wrapS = t.wrapT = THREE.RepeatWrapping;
+  return t;
+}
+
+/** 牆上的海報 */
+export function posterTexture(title: string, sub: string, hue: number) {
+  const { c, g } = canvas(256, 384);
+  const bg = g.createLinearGradient(0, 0, 0, 384);
+  bg.addColorStop(0, `hsl(${hue} 55% 38%)`);
+  bg.addColorStop(1, `hsl(${(hue + 40) % 360} 60% 18%)`);
+  g.fillStyle = bg;
+  g.fillRect(0, 0, 256, 384);
+  g.fillStyle = 'rgba(255,255,255,0.12)';
+  g.beginPath();
+  g.arc(128, 170, 90, 0, Math.PI * 2);
+  g.fill();
+  g.textAlign = 'center';
+  g.fillStyle = '#fff';
+  g.font = 'bold 58px "Arial Black", sans-serif';
+  g.fillText(title, 128, 180);
+  g.font = 'bold 26px "Noto Sans TC","PingFang TC","Microsoft JhengHei",sans-serif';
+  g.fillStyle = '#ffe9a8';
+  g.fillText(sub, 128, 240);
+  g.strokeStyle = 'rgba(255,255,255,0.7)';
+  g.lineWidth = 6;
+  g.strokeRect(8, 8, 240, 368);
+  return tex(c);
 }

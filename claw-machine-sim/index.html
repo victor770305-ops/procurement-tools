@@ -193,7 +193,43 @@
       #ops { left: 8px; right: 8px; top: auto; bottom: 74px; width: auto; max-height: 46%; z-index: 4; }
       #machSeg button { padding: 6px 10px; }
     }
-  </style>
+  
+    /* ---------- 60 台機台版:覆寫與新增 ---------- */
+    #ops { position: absolute; left: 12px; top: 74px; width: 340px; max-height: calc(100% - 200px); overflow: auto; touch-action: pan-y; padding: 12px; font-size: 12.5px; }
+    #ops .tiles, #opsSummary { display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px; }
+    .tile { padding: 7px 4px; border-radius: 10px; text-align: center; background: rgba(255,255,255,0.06); border: 1px solid transparent; }
+    .tile b { display: block; font-size: 17px; font-variant-numeric: tabular-nums; }
+    .tile span { font-size: 10.5px; color: var(--muted); }
+    .tile.busy { background: rgba(65,232,255,0.14); } .tile.service { background: rgba(255,200,80,0.14); }
+    .tile.warn { background: rgba(255,90,90,0.18); border-color: rgba(255,120,120,0.4); }
+    .selrow { display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px; }
+    .selrow b { font-size: 14px; }
+    #opsSel { padding: 9px 10px; border-radius: 12px; background: rgba(255,255,255,0.06); border: 1px solid var(--line); }
+    #opsSel .meta { display: flex; align-items: center; gap: 8px; color: var(--muted); font-size: 11px; margin-top: 5px; font-variant-numeric: tabular-nums; }
+    .prow { display: flex; justify-content: space-between; gap: 8px; padding: 6px 8px; border-radius: 8px; cursor: pointer; }
+    .prow:hover { background: rgba(255,255,255,0.06); }
+    .prow.hot span:first-child { color: #ffb4b4; }
+    .prow span:last-child { color: var(--muted); white-space: nowrap; }
+    .empty { color: var(--muted); padding: 4px 8px; }
+    .bad { color: #ff9c9c; }
+    #markers { position: absolute; inset: 0; pointer-events: none !important; overflow: hidden; }
+    .mk { position: absolute; transform: translate(-50%, -50%); width: 30px; height: 30px; border-radius: 50%; border: 2px solid rgba(255,255,255,0.85); background: rgba(20,14,40,0.82); font-size: 15px; line-height: 1; display: grid; place-items: center; cursor: pointer; padding: 0; pointer-events: auto; box-shadow: 0 2px 10px rgba(0,0,0,0.45); }
+    .mk.urgent { border-color: #ff6b6b; animation: mkp 1s infinite; }
+    @keyframes mkp { 50% { box-shadow: 0 0 0 7px rgba(255,107,107,0.25); } }
+    .mlabel { position: absolute; transform: translate(-50%, -50%); padding: 1px 6px; border-radius: 8px; font-size: 11px; font-weight: 800; color: #e9edf7; background: rgba(15,12,30,0.7); pointer-events: none; font-variant-numeric: tabular-nums; }
+    .mlabel.sel { background: #41e8ff; color: #06101f; }
+    #machNav { display: flex; align-items: center; gap: 4px; padding: 4px; border-radius: 999px; }
+    #machNav button { width: 34px; height: 34px; border: 0; border-radius: 50%; background: rgba(255,255,255,0.1); color: var(--text); font-size: 15px; cursor: pointer; font-family: inherit; }
+    #machNav span { padding: 0 8px; font-size: 13px; font-weight: 700; min-width: 92px; text-align: center; font-variant-numeric: tabular-nums; }
+    #shiftSeg { display: grid; grid-template-columns: 1fr auto; gap: 6px 10px; align-items: center; font-size: 13px; }
+    #shiftSeg .seg { padding: 3px; } #shiftSeg .seg button { padding: 6px 12px; font-size: 13px; }
+    #shiftSeg button:disabled { opacity: 0.45; }
+    #settings { width: 270px; }
+    @media (max-width: 700px) {
+      #ops { left: 8px; right: 8px; top: auto; bottom: 120px; width: auto; max-height: 42%; z-index: 4; }
+      #machNav span { min-width: 80px; }
+    }
+</style>
 </head>
 <body>
   <canvas id="view"></canvas>
@@ -201,12 +237,12 @@
   <div id="hud" data-phase="prep">
     <div id="top">
       <div class="stats">
-        <div class="panel chip" id="cashChip"><span class="ico">💰</span><div><small>現金</small><span id="cash">1,000</span></div></div>
+        <div class="panel chip" id="cashChip"><span class="ico">💰</span><div><small>現金</small><span id="cash">30,000</span></div></div>
         <div class="panel chip"><span class="ico">⭐</span><div><small>聲望</small><span id="rep">2.5</span></div></div>
         <div class="panel chip clock"><span class="ico">📅</span><div><small id="dayLabel">第 1 天</small><span id="clock">10:00</span></div><div class="bar"><i id="dayBar"></i></div></div>
       </div>
       <div class="btns">
-        <button class="panel icon-btn" id="btnCam" title="切換視角">🎥</button>
+        <button class="panel icon-btn" id="btnCam" title="切換上帝視角 / 近看機台">🎥</button>
         <button class="panel icon-btn" id="btnOps" title="營運總覽">📊</button>
         <button class="panel icon-btn" id="btnShop" title="進貨與補貨">🛒</button>
         <button class="panel icon-btn" id="btnCfg" title="營運設定">⚙️</button>
@@ -215,11 +251,16 @@
     </div>
 
     <div id="ops" class="panel" hidden>
-      <div class="h"><b>營運總覽</b><span id="opsCounter"></span></div>
-      <div class="sec">機台(點選切換)</div>
-      <div id="opsMachines"></div>
-      <div class="sec">員工</div>
+      <div class="h"><b>營運總覽</b><span id="opsShift"></span></div>
+      <div id="opsSummary"></div>
+      <div class="sec">選取的機台</div>
+      <div id="opsSel"></div>
+      <div class="sec">待處理</div>
+      <div id="opsProblems"></div>
+      <div class="sec">在班店員</div>
       <div id="opsStaff"></div>
+      <div class="sec">兌幣機</div>
+      <div id="opsEx"></div>
       <div class="sec">店內動態</div>
       <div id="opsFeed"></div>
     </div>
@@ -229,9 +270,15 @@
       <label><span>單次售價</span><b id="priceVal">NT$ 20</b></label>
       <input type="range" id="price" min="10" max="50" step="5" value="20" />
       <div class="hintline" id="priceHint"></div>
-      <label><span>爪力</span><b id="strVal">50%</b></label>
-      <input type="range" id="strength" min="15" max="95" value="50" />
+      <label><span>爪力(全店)</span><b id="strVal">40%</b></label>
+      <input type="range" id="strength" min="15" max="95" value="40" />
       <div class="hintline" id="strHint"></div>
+      <div class="sub">班表(營業前可調整)</div>
+      <div id="shiftSeg">
+        <span>早班 10:00–16:00</span><div class="panel seg"><button data-shift="0" data-n="3">3 人</button><button data-shift="0" data-n="4">4 人</button></div>
+        <span>晚班 16:00–22:00</span><div class="panel seg"><button data-shift="1" data-n="3">3 人</button><button data-shift="1" data-n="4">4 人</button></div>
+      </div>
+      <div class="hintline">每人每班薪水 NT$400。人手不夠時,補貨、維修與清理會變慢。</div>
       <div class="sub">庫存</div>
       <div class="row"><span>機台內(全部)</span><b id="mStock">0</b></div>
       <div class="row"><span>倉庫</span><b id="wStock">0</b></div>
@@ -243,18 +290,19 @@
       <div class="row" style="margin-top:12px"><button id="btnReset" class="panel mini">重新開始</button></div>
     </div>
 
+    <div id="markers"></div>
     <div id="bubbles"></div>
     <div id="msg" class="panel"></div>
 
     <div id="dock">
-      <div class="panel seg" id="machSeg"></div>
+      <div class="panel" id="machNav"><button id="btnPrev" title="上一台">◀</button><span id="machLabel">機台 1 / 60</span><button id="btnNextM" title="下一台">▶</button></div>
       <div class="only-prep" style="display:flex;gap:10px">
         <button class="cta ghost" id="btnTest">試玩<small>選取的機台 · 空白鍵</small></button>
         <button class="cta" id="btnOpen">開店營業<small>第 <span id="dockDay">1</span> 天</small></button>
       </div>
       <div class="only-open" style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;justify-content:center">
-        <div class="panel seg" id="speed"><button data-s="1">1×</button><button data-s="2">2×</button><button data-s="4">4×</button></div>
-        <div class="panel" id="queueInfo">排隊 0 人</div>
+        <div class="panel seg" id="speed"><button data-s="1">1×</button><button data-s="2">2×</button><button data-s="4">4×</button><button data-s="8">8×</button></div>
+        <div class="panel" id="queueInfo">場內客人 0</div>
       </div>
     </div>
 
@@ -262,11 +310,11 @@
       <div id="joy"><span class="arrow" style="top:8px">▲</span><span class="arrow" style="bottom:8px">▼</span><span class="arrow" style="left:10px">◀</span><span class="arrow" style="right:10px">▶</span><div id="knob"></div></div>
       <button id="dropbtn">放爪</button>
     </div>
-    <div class="hint only-prep">方向鍵 / WASD 移動 · 空白鍵放爪</div>
+    <div class="hint">拖曳平移 · 滾輪/雙指縮放 · 點機台選取 · 圖示是需要處理的狀況</div>
 
     <div id="shop" class="modal" hidden>
       <div class="sheet">
-        <h2>進貨與上架</h2>
+        <h2>進貨與補貨</h2>
         <div class="sub2" id="shopInfo"></div>
         <div id="packList"></div>
         <label class="toggle"><span>自動補貨(貨少時店員主動補)</span><input type="checkbox" id="autoRestock" checked /></label>
@@ -285,7 +333,7 @@
     </div>
   </div>
 
-  <div id="loading"><div><div class="logo">CLAW CLUB</div><p>正在整理店面…</p></div></div>
+  <div id="loading"><div><div class="logo">CLAW CLUB</div><p>正在佈置 60 台機台…</p></div></div>
   <script type="module" src="/src/main.ts"></script>
 </body>
 </html>

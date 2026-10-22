@@ -5,8 +5,10 @@ import { RARITY } from './config';
 import { buildStore } from './environment';
 import { Game } from './game';
 import { Input } from './input';
+import { N_MACHINES, gridOf, themeOf } from './layout';
+import { LiteLayer } from './lite';
 import type { Machine } from './machine';
-import { CamPreset, Renderer } from './render';
+import { Renderer } from './render';
 import { glowTexture } from './textures';
 import { Hud } from './ui';
 
@@ -23,10 +25,16 @@ async function main() {
   const store = buildStore();
   gfx.scene.add(store.group);
 
+  // 遠景層:60 台機台一次畫完
+  const grids = Array.from({ length: N_MACHINES }, (_, i) => gridOf(i));
+  const lite = new LiteLayer(grids, grids.map((_, i) => themeOf(i)));
+  gfx.scene.add(lite.group);
+
   // --- 得獎特效(粒子),掛在各機台自己的座標系 ---
   const sparkles: { host: THREE.Object3D; pts: THREE.Points; vel: Float32Array; life: number }[] = [];
   const sparkTex = glowTexture('rgba(255,255,255,1)');
   const burst = (m: Machine, color: number) => {
+    if (!m.cabinet) return;
     const n = 70;
     const pos = new Float32Array(n * 3);
     const vel = new Float32Array(n * 3);
@@ -52,20 +60,43 @@ async function main() {
     gfx,
     scene: gfx.scene,
     store,
+    lite,
     input,
     sfx,
     hud,
     onWinFx: (m, p) => burst(m, new THREE.Color(RARITY[p.rarity].color).getHex()),
   });
 
+  // --- 選取機台 ---
+  hud.onSelectMachine = (i) => game.focusMachine(i);
+  gfx.onPick = (p) => {
+    // 點地面:找最近的機台
+    let best = -1;
+    let bd = 1.9;
+    for (const m of game.machines) {
+      const d = Math.hypot(m.x - p.x, m.z + 0.2 - p.z);
+      if (d < bd) {
+        bd = d;
+        best = m.index;
+      }
+    }
+    if (best >= 0) {
+      sfx.click();
+      game.select(best);
+    }
+  };
+  $('btnPrev').addEventListener('click', () => {
+    sfx.click();
+    game.focusMachine((game.selected + N_MACHINES - 1) % N_MACHINES);
+  });
+  $('btnNextM').addEventListener('click', () => {
+    sfx.click();
+    game.focusMachine((game.selected + 1) % N_MACHINES);
+  });
+
   // --- 介面事件 ---
   const unlock = () => sfx.unlock();
   window.addEventListener('pointerdown', unlock, { once: true });
-  hud.onSelect = (i) => {
-    sfx.click();
-    game.select(i);
-    if (gfx.currentPreset === 'store') hud.say(`${game.sel.name}(切到 🎥 可近看這台)`, 1500);
-  };
   $('btnTest').addEventListener('click', () => {
     unlock();
     game.testPlay();
@@ -78,6 +109,12 @@ async function main() {
     b.addEventListener('click', () => {
       sfx.click();
       game.setSpeed(Number(b.dataset.s));
+    }),
+  );
+  document.querySelectorAll<HTMLButtonElement>('#shiftSeg button').forEach((b) =>
+    b.addEventListener('click', () => {
+      sfx.click();
+      game.setShiftSize(Number(b.dataset.shift) as 0 | 1, Number(b.dataset.n));
     }),
   );
 
@@ -111,15 +148,16 @@ async function main() {
     if (hud.armReset()) game.resetAll();
   });
 
-  const presets: CamPreset[] = ['store', 'front', 'top'];
-  const presetNames = ['全店視角', '近看選取的機台', '俯視選取的機台'];
-  const setPreset = (p: CamPreset) => {
-    gfx.setPreset(p);
-    hud.say(presetNames[presets.indexOf(p)], 1200);
-  };
   $('btnCam').addEventListener('click', () => {
-    setPreset(presets[(presets.indexOf(gfx.currentPreset) + 1) % presets.length]);
     sfx.click();
+    if (gfx.currentPreset === 'god') {
+      gfx.setPreset('front');
+      hud.say(`近看 ${game.sel.name}`, 1200);
+    } else {
+      gfx.setPreset('god');
+      gfx.flyTo(game.sel.x, game.sel.z + 2, 30);
+      hud.say('上帝視角(拖曳平移、滾輪縮放)', 1600);
+    }
   });
   $('btnSnd').addEventListener('click', () => {
     unlock();
@@ -127,10 +165,10 @@ async function main() {
     $('btnSnd').textContent = sfx.muted ? '🔇' : '🔊';
   });
 
+  const keys = new Set<string>();
   window.addEventListener('keydown', (e) => {
+    keys.add(e.code);
     if (e.repeat) return;
-    const n = Number(e.key);
-    if (n >= 1 && n <= game.machines.length) hud.onSelect?.(n - 1);
     if (e.code === 'Space') {
       unlock();
       if (game.phase === 'prep' && !game.manualMachine && hud.el.shop.hidden && hud.el.report.hidden) {
@@ -139,6 +177,7 @@ async function main() {
       }
     }
   });
+  window.addEventListener('keyup', (e) => keys.delete(e.code));
 
   // 大螢幕預設展開營運總覽
   if (innerWidth >= 900) {
@@ -147,14 +186,14 @@ async function main() {
   }
 
   $('loading').classList.add('done');
-  if (game.state.day === 1 && game.state.totalProfit === 0) hud.say('歡迎光臨!先看看店裡,準備好就按「開店營業」', 3600);
+  if (game.state.day === 1 && game.state.totalProfit === 0) hud.say('歡迎光臨!拖曳畫面平移、滾輪縮放,準備好就按「開店營業」', 4000);
   else hud.say(`歡迎回來,第 ${game.state.day} 天`, 2200);
 
   // --- 主迴圈 ---
   const clock = new THREE.Clock();
   let time = 0;
   let prevManual: Machine | null = null;
-  let savedPreset: CamPreset = 'store';
+  let savedPreset: 'god' | 'front' = 'god';
   const zero = { x: 0, z: 0 };
   const loop = () => {
     const dt = Math.min(clock.getDelta(), 0.1);
@@ -166,13 +205,20 @@ async function main() {
     if (man && !prevManual) {
       savedPreset = gfx.currentPreset;
       game.select(man.index);
-      if (savedPreset === 'store') gfx.setPreset('front');
+      gfx.setPreset('front');
     } else if (!man && prevManual) {
       gfx.setPreset(savedPreset);
     }
     prevManual = man;
 
-    if (input.consumeDrop() && man && man.claw.playing && !man.roundActive) {
+    // 鍵盤平移(試玩時方向鍵是操控爪子)
+    if (!man) {
+      const dx = (keys.has('ArrowRight') || keys.has('KeyD') ? 1 : 0) - (keys.has('ArrowLeft') || keys.has('KeyA') ? 1 : 0);
+      const dz = (keys.has('ArrowDown') || keys.has('KeyS') ? 1 : 0) - (keys.has('ArrowUp') || keys.has('KeyW') ? 1 : 0);
+      gfx.keyPan(dx, dz, dt);
+    }
+
+    if (input.consumeDrop() && man && man.claw?.playing && !man.roundActive) {
       sfx.click();
       man.claw.drop();
     }
@@ -197,15 +243,16 @@ async function main() {
       }
     }
 
-    for (const m of game.machines) m.cabinet.update(time, man === m ? input.move : zero, m.claw.state === 'play');
-    sfx.setMotor(Math.min(1, game.sel.claw.speedMag / 0.6));
-    gfx.setLeftInset(!hud.el.ops.hidden && innerWidth >= 900 ? 340 : 0);
+    for (const m of game.machines) if (m.mode === 'full') m.cabinet!.update(time, m.manual ? input.move : zero, m.claw!.state === 'play');
+    const sc = game.sel.claw;
+    sfx.setMotor(sc ? Math.min(1, sc.speedMag / 0.6) : 0);
+    gfx.setLeftInset(!hud.el.ops.hidden && innerWidth >= 900 ? 360 : 0);
     gfx.update(dt, time);
     requestAnimationFrame(loop);
   };
   loop();
 
-  (window as unknown as { __game: unknown }).__game = { game, gfx, hud };
+  (window as unknown as { __game: unknown }).__game = { game, gfx, hud, lite };
 }
 
 main().catch((e) => {

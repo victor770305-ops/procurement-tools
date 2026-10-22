@@ -9,6 +9,7 @@ export interface PlushEntity {
   type: PlushType;
   rarity: Rarity;
   cost: number;
+  stuck?: boolean;
   mesh: THREE.Group;
   body: RAPIER.RigidBody;
   won: boolean;
@@ -119,7 +120,7 @@ export class Physics {
     let best: PlushEntity | null = null;
     let bd = Infinity;
     for (const p of this.plushes) {
-      if (p.won) continue;
+      if (p.won || p.stuck) continue;
       const t = p.body.translation();
       if (t.y < 0.05) continue;
       const d = Math.hypot(t.x + 0.45, t.z - 0.3);
@@ -137,8 +138,26 @@ export class Physics {
     return best;
   }
 
+  /** 商品卡洞:把已掉入出口的娃娃卡在洞口邊緣,等店員取出 */
+  makeStuck(p: PlushEntity) {
+    p.won = false;
+    p.stuck = true;
+    p.body.setBodyType(RAPIER.RigidBodyType.Fixed, true);
+    p.body.setTranslation({ x: CHUTE.x1 - 0.1, y: 0.1, z: CHUTE.z0 + 0.13 }, true);
+    p.body.setRotation({ x: 0.2, y: 0.4, z: 0.5, w: 0.74 }, true);
+    p.body.setLinvel({ x: 0, y: 0, z: 0 }, false);
+  }
+
+  get count() {
+    return this.plushes.filter((p) => !p.won && !p.stuck).length;
+  }
+
+  dispose() {
+    this.world.free();
+  }
+
   stockItems(): StockItem[] {
-    return this.plushes.filter((p) => !p.won).map((p) => ({ typeId: p.type.id, rarity: p.rarity }));
+    return this.plushes.filter((p) => !p.won && !p.stuck).map((p) => ({ typeId: p.type.id, rarity: p.rarity }));
   }
 
   syncMeshes() {
@@ -160,7 +179,7 @@ export class Physics {
   detectWins(now: number): PlushEntity[] {
     const won: PlushEntity[] = [];
     for (const p of this.plushes) {
-      if (p.won) continue;
+      if (p.won || p.stuck) continue;
       const t = p.body.translation();
       if (t.y < -0.2 && t.x < CHUTE.x1 && t.z > CHUTE.z0) {
         p.won = true;

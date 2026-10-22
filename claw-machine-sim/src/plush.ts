@@ -170,9 +170,19 @@ function buildParts(type: PlushType, rarity: Rarity): THREE.Group {
   return g;
 }
 
-/** 把同材質的零件合併成單一網格,大幅減少繪製次數(多台機台時很重要) */
+/** 把同材質的零件合併成單一網格,大幅減少繪製次數;同款娃娃共用幾何(clone 不複製幾何) */
+const protos = new Map<string, THREE.Group>();
 export function buildPlush(type: PlushType, rarity: Rarity): THREE.Group {
-  const parts = buildParts(type, rarity);
+  const key = `${type.id}:${rarity}`;
+  let proto = protos.get(key);
+  if (!proto) {
+    proto = mergeParts(buildParts(type, rarity));
+    protos.set(key, proto);
+  }
+  return proto.clone(true);
+}
+
+function mergeParts(parts: THREE.Group): THREE.Group {
   parts.updateMatrixWorld(true);
   const buckets = new Map<THREE.Material, THREE.BufferGeometry[]>();
   parts.traverse((o) => {
