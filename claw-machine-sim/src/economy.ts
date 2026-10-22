@@ -2,7 +2,10 @@ import type { Rarity } from './config';
 
 /** 單隻娃娃的進貨成本(也是顧客拿走時計入的獎品成本) */
 export const PLUSH_COST: Record<Rarity, number> = { common: 15, rare: 40, ssr: 120 };
-export const RENT = 150;
+export const RENT = 200;
+export const WAGE = 90;
+export const STAFF_COUNT = 3;
+export const WAGES = WAGE * STAFF_COUNT;
 export const CAPACITY = 24;
 /** 一個營業日的長度(遊戲秒),對應 10:00 ~ 22:00 */
 export const OPEN_SECONDS = 480;
@@ -42,6 +45,10 @@ export interface DayStats {
   wins: number;
   rareWins: number;
   revenue: number;
+  coinsSold: number;
+  restocks: number;
+  cleans: number;
+  assists: number;
   cogs: number;
   purchases: number;
   satSum: number;
@@ -57,6 +64,10 @@ export const newStats = (): DayStats => ({
   wins: 0,
   rareWins: 0,
   revenue: 0,
+  coinsSold: 0,
+  restocks: 0,
+  cleans: 0,
+  assists: 0,
   cogs: 0,
   purchases: 0,
   satSum: 0,
@@ -79,7 +90,7 @@ export interface GameState {
 
 export const initialState = (): GameState => ({
   day: 1,
-  cash: 1000,
+  cash: 1500,
   rep: 2.5,
   price: BASE_PRICE,
   strength: 0.4,
@@ -88,23 +99,23 @@ export const initialState = (): GameState => ({
   totalProfit: 0,
 });
 
-const KEY = 'claw-club-save-v1';
+const KEY = 'claw-club-save-v2';
 
-export function saveGame(state: GameState, machine: StockItem[]) {
+export function saveGame(state: GameState, machines: StockItem[][]) {
   try {
-    localStorage.setItem(KEY, JSON.stringify({ state, machine }));
+    localStorage.setItem(KEY, JSON.stringify({ state, machines }));
   } catch {
     /* 無痕模式等情況下無法儲存,忽略 */
   }
 }
 
-export function loadGame(): { state: GameState; machine: StockItem[] } | null {
+export function loadGame(): { state: GameState; machines: StockItem[][] } | null {
   try {
     const raw = localStorage.getItem(KEY);
     if (!raw) return null;
     const d = JSON.parse(raw);
-    if (!d?.state || !Array.isArray(d.machine)) return null;
-    return { state: { ...initialState(), ...d.state }, machine: d.machine };
+    if (!d?.state || !Array.isArray(d.machines)) return null;
+    return { state: { ...initialState(), ...d.state }, machines: d.machines };
   } catch {
     return null;
   }
@@ -120,7 +131,7 @@ export function clearSave() {
 
 /** 營業日結算 */
 export function settle(stats: DayStats) {
-  const profit = stats.revenue - stats.cogs - RENT;
+  const profit = stats.revenue - stats.cogs - RENT - WAGES;
   const avgSat = stats.satCount ? stats.satSum / stats.satCount : 0;
   const repDelta = stats.satCount ? Math.max(-0.5, Math.min(0.5, avgSat * 0.45)) : -0.1;
   const winRate = stats.plays ? stats.wins / stats.plays : 0;

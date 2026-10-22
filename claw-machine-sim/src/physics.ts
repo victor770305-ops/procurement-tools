@@ -114,6 +114,29 @@ export class Physics {
     });
   }
 
+  /** 店員協助:把最靠近出口的一隻娃娃往出口推一把 */
+  assistNudge(): PlushEntity | null {
+    let best: PlushEntity | null = null;
+    let bd = Infinity;
+    for (const p of this.plushes) {
+      if (p.won) continue;
+      const t = p.body.translation();
+      if (t.y < 0.05) continue;
+      const d = Math.hypot(t.x + 0.45, t.z - 0.3);
+      if (d < bd) {
+        bd = d;
+        best = p;
+      }
+    }
+    if (!best) return null;
+    const t = best.body.translation();
+    const dx = -0.55 - t.x;
+    const dz = 0.4 - t.z;
+    const n = Math.hypot(dx, dz) || 1;
+    best.body.setLinvel({ x: (dx / n) * 1.3, y: 1.6, z: (dz / n) * 1.3 }, true);
+    return best;
+  }
+
   stockItems(): StockItem[] {
     return this.plushes.filter((p) => !p.won).map((p) => ({ typeId: p.type.id, rarity: p.rarity }));
   }

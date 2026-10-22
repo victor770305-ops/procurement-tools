@@ -61,7 +61,7 @@
     .hint { position: absolute; left: 50%; bottom: 4px; transform: translateX(-50%); color: var(--muted); font-size: 12px; text-align: center; pointer-events: none !important; }
     @media (pointer: coarse) { .hint { display: none; } }
 
-    #settings { position: absolute; left: 12px; top: 74px; width: 232px; padding: 14px; font-size: 13px; }
+    #settings { position: absolute; right: 12px; top: 74px; width: 232px; padding: 14px; font-size: 13px; }
     #settings[hidden] { display: none; }
     #settings h3 { margin: 0 0 10px; font-size: 13px; color: var(--cyan); letter-spacing: 1px; }
     #settings label { display: flex; justify-content: space-between; margin: 8px 0 4px; color: var(--muted); }
@@ -88,7 +88,7 @@
       .btns { gap: 5px; }
       .icon-btn { width: 38px; height: 38px; font-size: 16px; border-radius: 12px; }
       #msg { font-size: 16px; top: 62px; white-space: normal; width: max-content; max-width: 88vw; }
-      #settings { top: 66px; left: 8px; }
+      #settings { top: 66px; right: 8px; left: auto; }
       #prizes { top: 66px; right: 8px; }
       #joy { width: 120px; height: 120px; }
       #dropbtn { width: 94px; height: 94px; }
@@ -157,6 +157,42 @@
       .seg button { padding: 7px 11px; }
       #settings { width: min(262px, calc(100vw - 16px)); }
     }
+
+    /* ---------- 全店營運總覽 ---------- */
+    #ops { position: absolute; left: 12px; top: 74px; width: 316px; max-height: calc(100% - 210px); overflow: auto; touch-action: pan-y; padding: 12px 12px 10px; font-size: 12.5px; }
+    #ops[hidden] { display: none; }
+    #ops .h { display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 6px; }
+    #ops .h b { font-size: 13px; letter-spacing: 1px; color: var(--cyan); }
+    #ops .h span { color: var(--muted); font-size: 11px; }
+    #ops .sec { margin: 10px 0 5px; color: var(--muted); font-size: 11px; letter-spacing: 1px; }
+    .mrow { display: grid; grid-template-columns: 10px 1fr auto; gap: 4px 8px; align-items: center; padding: 7px 8px; border-radius: 10px; cursor: pointer; border: 1px solid transparent; }
+    .mrow + .mrow { margin-top: 3px; }
+    .mrow.sel { background: rgba(255,255,255,0.07); border-color: var(--line); }
+    .mrow .dot { width: 10px; height: 10px; border-radius: 50%; }
+    .mrow b { font-size: 13px; }
+    .pill { padding: 2px 8px; border-radius: 999px; font-size: 11px; font-weight: 700; background: rgba(255,255,255,0.1); color: var(--text); white-space: nowrap; }
+    .pill.busy { background: rgba(65,232,255,0.2); color: #8ff0ff; }
+    .pill.service { background: rgba(255,200,80,0.22); color: #ffd98a; }
+    .pill.warn { background: rgba(255,90,90,0.25); color: #ff9c9c; }
+    .mrow .meta { grid-column: 2 / 4; display: flex; align-items: center; gap: 8px; color: var(--muted); font-size: 11px; font-variant-numeric: tabular-nums; }
+    .bar2 { flex: 1; height: 5px; border-radius: 3px; background: rgba(255,255,255,0.12); overflow: hidden; min-width: 40px; }
+    .bar2 i { display: block; height: 100%; background: linear-gradient(90deg, var(--cyan), #7a6bff); }
+    .bar2.low i { background: #ff7a7a; }
+    .srow { display: flex; justify-content: space-between; gap: 8px; padding: 4px 8px; }
+    .srow span:last-child { color: var(--muted); text-align: right; }
+    .srow b { font-weight: 700; }
+    .frow { display: grid; grid-template-columns: 38px 1fr; gap: 6px; padding: 3px 8px; line-height: 1.35; }
+    .frow time { color: var(--muted); font-size: 10.5px; font-variant-numeric: tabular-nums; padding-top: 1px; }
+    .frow.win span { color: #ffd98a; } .frow.alert span { color: #ff9c9c; } .frow.staff span { color: #8ff0ff; } .frow.sale span { color: #9be8b4; } .frow.system span { color: var(--muted); }
+    #machSeg { padding: 3px; }
+    #machSeg button { padding: 7px 12px; font-size: 14px; }
+    #hud[data-phase="report"] #dock { display: none; }
+    .toggle { display: flex; justify-content: space-between; align-items: center; margin: 12px 0 0; padding: 10px 12px; border-radius: 12px; background: rgba(255,255,255,0.05); border: 1px solid var(--line); font-size: 13px; }
+    .toggle input { width: 18px; height: 18px; accent-color: var(--pink); }
+    @media (max-width: 700px) {
+      #ops { left: 8px; right: 8px; top: auto; bottom: 74px; width: auto; max-height: 46%; z-index: 4; }
+      #machSeg button { padding: 6px 10px; }
+    }
   </style>
 </head>
 <body>
@@ -171,10 +207,21 @@
       </div>
       <div class="btns">
         <button class="panel icon-btn" id="btnCam" title="切換視角">🎥</button>
-        <button class="panel icon-btn" id="btnShop" title="進貨與上架">🛒</button>
+        <button class="panel icon-btn" id="btnOps" title="營運總覽">📊</button>
+        <button class="panel icon-btn" id="btnShop" title="進貨與補貨">🛒</button>
         <button class="panel icon-btn" id="btnCfg" title="營運設定">⚙️</button>
         <button class="panel icon-btn" id="btnSnd" title="音效">🔊</button>
       </div>
+    </div>
+
+    <div id="ops" class="panel" hidden>
+      <div class="h"><b>營運總覽</b><span id="opsCounter"></span></div>
+      <div class="sec">機台(點選切換)</div>
+      <div id="opsMachines"></div>
+      <div class="sec">員工</div>
+      <div id="opsStaff"></div>
+      <div class="sec">店內動態</div>
+      <div id="opsFeed"></div>
     </div>
 
     <div id="settings" class="panel" hidden>
@@ -186,7 +233,7 @@
       <input type="range" id="strength" min="15" max="95" value="50" />
       <div class="hintline" id="strHint"></div>
       <div class="sub">庫存</div>
-      <div class="row"><span>機台內</span><b id="mStock">0</b></div>
+      <div class="row"><span>機台內(全部)</span><b id="mStock">0</b></div>
       <div class="row"><span>倉庫</span><b id="wStock">0</b></div>
       <div class="sub">今日營業</div>
       <div class="row"><span>顧客</span><b id="sCust">0</b></div>
@@ -196,13 +243,13 @@
       <div class="row" style="margin-top:12px"><button id="btnReset" class="panel mini">重新開始</button></div>
     </div>
 
-    <div id="prizes"></div>
     <div id="bubbles"></div>
     <div id="msg" class="panel"></div>
 
     <div id="dock">
+      <div class="panel seg" id="machSeg"></div>
       <div class="only-prep" style="display:flex;gap:10px">
-        <button class="cta ghost" id="btnTest">試玩<small>免費 · 空白鍵</small></button>
+        <button class="cta ghost" id="btnTest">試玩<small>選取的機台 · 空白鍵</small></button>
         <button class="cta" id="btnOpen">開店營業<small>第 <span id="dockDay">1</span> 天</small></button>
       </div>
       <div class="only-open" style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;justify-content:center">
@@ -222,7 +269,8 @@
         <h2>進貨與上架</h2>
         <div class="sub2" id="shopInfo"></div>
         <div id="packList"></div>
-        <div class="foot"><button class="act alt" id="btnShelve">上架到機台</button><button class="act" id="btnShopClose" style="background:rgba(255,255,255,0.12)">關閉</button></div>
+        <label class="toggle"><span>自動補貨(貨少時店員主動補)</span><input type="checkbox" id="autoRestock" checked /></label>
+        <div class="foot"><button class="act alt" id="btnShelve">請店員補貨</button><button class="act" id="btnShopClose" style="background:rgba(255,255,255,0.12)">關閉</button></div>
       </div>
     </div>
 

@@ -18,12 +18,16 @@ export class Hud {
   private msgTimer = 0;
   private bubbles = new Map<number, HTMLElement>();
   private resetArmed = 0;
+  private opsT = 0;
+  private feedSeen = -1;
+  onSelect?: (i: number) => void;
 
   readonly el = {
     hud: $('hud'),
     msg: $('msg'),
     controls: $('controls'),
     settings: $('settings'),
+    ops: $('ops'),
     shop: $('shop'),
     report: $('report'),
   };
@@ -67,14 +71,54 @@ export class Hud {
     }
   }
 
-  addPrize(name: string, label: string, color: string, who: string) {
-    const el = document.createElement('div');
-    el.className = 'prize panel';
-    el.style.borderColor = color;
-    el.innerHTML = `<span>🧸</span><span>${name}</span><span style="color:${color};font-size:11px">${label}</span><span style="color:var(--muted);font-size:11px">${who}</span>`;
-    const box = $('prizes');
-    box.prepend(el);
-    while (box.children.length > 4) box.lastElementChild!.remove();
+  setSelected(i: number, names: string[]) {
+    const seg = $('machSeg');
+    if (seg.children.length !== names.length) {
+      seg.innerHTML = '';
+      names.forEach((n, k) => {
+        const b = document.createElement('button');
+        b.textContent = String(k + 1);
+        b.title = n;
+        b.addEventListener('click', () => this.onSelect?.(k));
+        seg.appendChild(b);
+      });
+    }
+    Array.from(seg.children).forEach((b, k) => b.classList.toggle('on', k === i));
+  }
+
+  /** 營運總覽:每 0.25 秒更新一次 */
+  renderOps(
+    dt: number,
+    snap: () => {
+      machines: { name: string; status: string; kind: string; stock: number; queue: number; plays: number; wins: number; dirt: number; color: string }[];
+      staff: { name: string; role: string; action: string }[];
+      counter: number;
+      warehouse: number;
+      feed: { time: string; text: string; kind: string }[];
+    },
+    feedVersion: number,
+    selected = 0,
+  ) {
+    if (this.el.ops.hidden) return;
+    this.opsT -= dt;
+    if (this.opsT > 0 && feedVersion === this.feedSeen) return;
+    this.opsT = 0.25;
+    const s = snap();
+    $('opsCounter').textContent = `櫃台排隊 ${s.counter} · 倉庫 ${s.warehouse} 隻`;
+    $('opsMachines').innerHTML = s.machines
+      .map(
+        (m, i) => `<div class="mrow ${i === selected ? 'sel' : ''}" data-i="${i}">
+          <span class="dot" style="background:${m.color}"></span><b>${m.name}</b><span class="pill ${m.kind}">${m.status}</span>
+          <div class="meta"><span>庫存 ${m.stock}</span><div class="bar2 ${m.stock <= 5 ? 'low' : ''}"><i style="width:${Math.min(100, (m.stock / 24) * 100)}%"></i></div><span>排隊 ${m.queue}</span><span>${m.plays} 玩 / ${m.wins} 中</span></div>
+        </div>`,
+      )
+      .join('');
+    $('opsMachines').querySelectorAll<HTMLElement>('.mrow').forEach((el) => el.addEventListener('click', () => this.onSelect?.(Number(el.dataset.i))));
+    $('opsStaff').innerHTML = s.staff.map((t) => `<div class="srow"><span><b>${t.name}</b> · ${t.role}</span><span>${t.action}</span></div>`).join('');
+    if (feedVersion !== this.feedSeen) {
+      this.feedSeen = feedVersion;
+      $('opsFeed').innerHTML = s.feed.map((f) => `<div class="frow ${f.kind}"><time>${f.time}</time><span>${f.text}</span></div>`).join('');
+    }
   }
 
   setSpeed(s: number) {
@@ -124,8 +168,9 @@ export class Hud {
     $('sRev').textContent = `NT$ ${fmt(o.revenue)}`;
   }
 
-  renderShop(o: { cash: number; machine: number; warehouse: number; capacity: number; canShelve: boolean }, onBuy: (p: Pack) => void) {
-    $('shopInfo').textContent = `現金 NT$ ${fmt(o.cash)} · 機台 ${o.machine}/${o.capacity} · 倉庫 ${o.warehouse}`;
+  renderShop(o: { cash: number; machine: number; warehouse: number; capacity: number; canShelve: boolean; auto: boolean }, onBuy: (p: Pack) => void) {
+    $('shopInfo').textContent = `現金 NT$ ${fmt(o.cash)} · 機台共 ${o.machine}/${o.capacity} · 倉庫 ${o.warehouse}`;
+    ($('autoRestock') as HTMLInputElement).checked = o.auto;
     const list = $('packList');
     list.innerHTML = '';
     for (const p of PACKS) {

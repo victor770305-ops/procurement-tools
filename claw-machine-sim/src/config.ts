@@ -24,6 +24,8 @@ export const CLAW = {
 export const HOME = { x: 0.5, z: -0.38 } as const;
 export const DROP_POINT = { x: -0.53, z: 0.38 } as const;
 
+export const CHUTE_CENTER = { x: -0.535, z: 0.38 } as const;
+
 export const BASE_HEIGHT = 0.95; // 機台地板距店內地面高度
 
 export type Rarity = 'common' | 'rare' | 'ssr';

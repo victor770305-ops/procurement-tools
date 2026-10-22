@@ -1,4 +1,5 @@
 import * as THREE from 'three';
+import { mergeGeometries } from 'three/examples/jsm/utils/BufferGeometryUtils.js';
 import type { Rarity } from './config';
 import { furBumpTexture } from './textures';
 
@@ -54,8 +55,8 @@ const eyeMat = glossy(0x0c0c10);
 const noseMat = glossy(0x2a1a18);
 const beakMat = (c: number) => new THREE.MeshStandardMaterial({ color: c, roughness: 0.5 });
 
-const sphereGeo = new THREE.SphereGeometry(1, 28, 20);
-const coneGeo = new THREE.ConeGeometry(1, 1, 20);
+const sphereGeo = new THREE.SphereGeometry(1, 18, 12);
+const coneGeo = new THREE.ConeGeometry(1, 1, 14);
 
 function ellipsoid(mat: THREE.Material, rx: number, ry: number, rz: number, x = 0, y = 0, z = 0) {
   const m = new THREE.Mesh(sphereGeo, mat);
@@ -76,7 +77,7 @@ export function pickRarity(): Rarity {
 }
 
 /** 程序化生成毛絨玩偶。本地座標:原點在身體中心,臉朝 +z。 */
-export function buildPlush(type: PlushType, rarity: Rarity): THREE.Group {
+function buildParts(type: PlushType, rarity: Rarity): THREE.Group {
   const g = new THREE.Group();
   const bodyMat = fur(type.body);
   const bellyMat = fur(type.belly);
@@ -167,4 +168,31 @@ export function buildPlush(type: PlushType, rarity: Rarity): THREE.Group {
     g.add(ellipsoid(ribbon, 0.014, 0.014, 0.012, 0, 0.07, 0.1));
   }
   return g;
+}
+
+/** 把同材質的零件合併成單一網格,大幅減少繪製次數(多台機台時很重要) */
+export function buildPlush(type: PlushType, rarity: Rarity): THREE.Group {
+  const parts = buildParts(type, rarity);
+  parts.updateMatrixWorld(true);
+  const buckets = new Map<THREE.Material, THREE.BufferGeometry[]>();
+  parts.traverse((o) => {
+    const m = o as THREE.Mesh;
+    if (!m.isMesh) return;
+    const geo = m.geometry.clone().applyMatrix4(m.matrixWorld);
+    const list = buckets.get(m.material as THREE.Material) ?? [];
+    list.push(geo);
+    buckets.set(m.material as THREE.Material, list);
+  });
+  const out = new THREE.Group();
+  for (const [material, geos] of buckets) {
+    const merged = mergeGeometries(geos, false);
+    if (!merged) continue;
+    const mesh = new THREE.Mesh(merged, material);
+    const basic = (material as THREE.Material).type === 'MeshBasicMaterial';
+    mesh.castShadow = !basic;
+    mesh.receiveShadow = !basic;
+    out.add(mesh);
+    for (const g of geos) g.dispose();
+  }
+  return out;
 }

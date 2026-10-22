@@ -1,4 +1,5 @@
 import * as THREE from 'three';
+import { isMobile } from './render';
 
 export interface HumanOpts {
   skin: number;
@@ -7,9 +8,9 @@ export interface HumanOpts {
   hair: number;
   scale: number;
   kid: boolean;
-  accessory: 'none' | 'backpack' | 'cap' | 'bow';
+  accessory: 'none' | 'backpack' | 'cap' | 'bow' | 'staff';
 }
-export type Pose = 'idle' | 'walk' | 'play' | 'cheer' | 'sad';
+export type Pose = 'idle' | 'walk' | 'play' | 'cheer' | 'sad' | 'wave';
 
 const cloth = (c: number) => new THREE.MeshStandardMaterial({ color: c, roughness: 0.85 });
 const skinMat = (c: number) => new THREE.MeshPhysicalMaterial({ color: c, roughness: 0.55, sheen: 0.6, sheenColor: new THREE.Color(0xffd5c0) });
@@ -29,6 +30,8 @@ export class Human {
   private legR = new THREE.Group();
   private armL = new THREE.Group();
   private armR = new THREE.Group();
+  private carryBox!: THREE.Mesh;
+  private carrying = false;
   private phase = Math.random() * 6;
   private bob = 0;
 
@@ -44,7 +47,7 @@ export class Human {
     const part = (geo: THREE.BufferGeometry, m: THREE.Material, p: THREE.Object3D, x = 0, y = 0, z = 0) => {
       const mesh = new THREE.Mesh(geo, m);
       mesh.position.set(x, y, z);
-      mesh.castShadow = true;
+      mesh.castShadow = !isMobile;
       mesh.receiveShadow = true;
       p.add(mesh);
       return mesh;
@@ -88,9 +91,25 @@ export class Human {
       const cap = part(new THREE.SphereGeometry(0.125, 20, 12, 0, Math.PI * 2, 0, Math.PI * 0.5), cloth(0x1b1f2a), this.head, 0, 0.035, 0);
       cap.rotation.x = -0.1;
       part(new THREE.BoxGeometry(0.16, 0.012, 0.11), cloth(0x1b1f2a), this.head, 0, 0.04, 0.12);
+    } else if (o.accessory === 'staff') {
+      // 圍裙與鴨舌帽
+      part(new THREE.BoxGeometry(0.31, 0.44, 0.02), cloth(0xf4f1ea), this.upper, 0, 0.27, 0.135);
+      part(new THREE.BoxGeometry(0.1, 0.05, 0.015), cloth(0xff3d9a), this.upper, 0.08, 0.42, 0.15);
+      const cap = part(new THREE.SphereGeometry(0.125, 20, 12, 0, Math.PI * 2, 0, Math.PI * 0.5), cloth(0xff3d9a), this.head, 0, 0.035, 0);
+      cap.rotation.x = -0.1;
+      part(new THREE.BoxGeometry(0.16, 0.012, 0.11), cloth(0xff3d9a), this.head, 0, 0.04, 0.12);
     } else if (o.accessory === 'bow') {
       for (const s of [-1, 1]) part(new THREE.SphereGeometry(0.045, 12, 10), cloth(0xff5fa2), this.head, s * 0.105, 0.07, -0.01);
     }
+
+    // 搬運用的箱子(平常隱藏)
+    this.carryBox = part(new THREE.BoxGeometry(0.34, 0.24, 0.3), cloth(0xc89a5b), this.upper, 0, 0.3, 0.36);
+    this.carryBox.visible = false;
+  }
+
+  setCarry(on: boolean) {
+    this.carrying = on;
+    this.carryBox.visible = on;
   }
 
   /** 世界座標的視線/頭頂位置(給對話泡泡) */
@@ -123,8 +142,13 @@ export class Human {
       legSwing = Math.sin(this.phase) * 0.62;
       bob = Math.abs(Math.sin(this.phase)) * 0.035;
       lean = 0.06;
-      this.armTo(this.armL, tmpV.set(0, -1, Math.sin(this.phase) * 0.55 + 0.05), k);
-      this.armTo(this.armR, tmpV.set(0, -1, -Math.sin(this.phase) * 0.55 + 0.05), k);
+      if (this.carrying) {
+        this.armTo(this.armL, tmpV.set(0.25, -0.35, 1), k);
+        this.armTo(this.armR, tmpV.set(-0.25, -0.35, 1), k);
+      } else {
+        this.armTo(this.armL, tmpV.set(0, -1, Math.sin(this.phase) * 0.55 + 0.05), k);
+        this.armTo(this.armR, tmpV.set(0, -1, -Math.sin(this.phase) * 0.55 + 0.05), k);
+      }
     } else if (pose === 'play' && reach) {
       this.phase += dt;
       lean = 0.2;
@@ -136,6 +160,10 @@ export class Human {
       bob = Math.abs(Math.sin(this.phase)) * 0.14;
       this.armTo(this.armL, tmpV.set(-0.35, 1, 0.2), k);
       this.armTo(this.armR, tmpV.set(0.35, 1, 0.2), k);
+    } else if (pose === 'wave') {
+      this.phase += dt * 6;
+      this.armTo(this.armR, tmpV.set(0.45 + Math.sin(this.phase * 2) * 0.35, 1, 0.1), k);
+      this.armTo(this.armL, tmpV.set(-0.08, -1, 0.04), k);
     } else if (pose === 'sad') {
       lean = 0.16;
       headX = 0.4;
@@ -144,8 +172,13 @@ export class Human {
     } else {
       this.phase += dt * 1.6;
       bob = Math.sin(this.phase) * 0.006;
-      this.armTo(this.armL, tmpV.set(-0.08, -1, 0.04), k);
-      this.armTo(this.armR, tmpV.set(0.08, -1, 0.04), k);
+      if (this.carrying) {
+        this.armTo(this.armL, tmpV.set(0.25, -0.35, 1), k);
+        this.armTo(this.armR, tmpV.set(-0.25, -0.35, 1), k);
+      } else {
+        this.armTo(this.armL, tmpV.set(-0.08, -1, 0.04), k);
+        this.armTo(this.armR, tmpV.set(0.08, -1, 0.04), k);
+      }
     }
     this.legL.rotation.x += (legSwing - this.legL.rotation.x) * k;
     this.legR.rotation.x += (-legSwing - this.legR.rotation.x) * k;

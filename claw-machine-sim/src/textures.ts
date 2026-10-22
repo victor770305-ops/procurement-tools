@@ -118,44 +118,42 @@ export function neonTexture(text: string, color: string, w = 1024, h = 256, font
 }
 
 /** 機台頂部招牌 */
-export function marqueeTexture() {
+export function marqueeTexture(title = 'CLAW CLUB', sub = '夾 娃 娃 樂 園', hue = 320) {
   const { c, g } = canvas(1024, 384);
   const bg = g.createLinearGradient(0, 0, 1024, 384);
-  bg.addColorStop(0, '#2a0b4d');
-  bg.addColorStop(0.5, '#5a1670');
-  bg.addColorStop(1, '#1a1b5e');
+  bg.addColorStop(0, `hsl(${(hue + 250) % 360} 70% 14%)`);
+  bg.addColorStop(0.5, `hsl(${hue} 60% 26%)`);
+  bg.addColorStop(1, `hsl(${(hue + 40) % 360} 65% 18%)`);
   g.fillStyle = bg;
   g.fillRect(0, 0, 1024, 384);
-  // 放射光
   const rg = g.createRadialGradient(512, 190, 10, 512, 190, 520);
-  rg.addColorStop(0, 'rgba(255,90,170,0.55)');
-  rg.addColorStop(1, 'rgba(255,90,170,0)');
+  rg.addColorStop(0, `hsla(${hue},100%,62%,0.55)`);
+  rg.addColorStop(1, `hsla(${hue},100%,62%,0)`);
   g.fillStyle = rg;
   g.fillRect(0, 0, 1024, 384);
-  // 星星
   for (let i = 0; i < 60; i++) {
     g.fillStyle = `rgba(255,255,255,${rnd(0.2, 0.9)})`;
-    const r = rnd(1, 3.5);
     g.beginPath();
-    g.arc(rnd(0, 1024), rnd(0, 384), r, 0, Math.PI * 2);
+    g.arc(rnd(0, 1024), rnd(0, 384), rnd(1, 3.5), 0, Math.PI * 2);
     g.fill();
   }
   g.textAlign = 'center';
   g.textBaseline = 'middle';
-  g.font = 'bold 170px "Arial Black", sans-serif';
-  g.shadowColor = '#ff2d95';
+  const size = title.length > 7 ? 150 : 190;
+  g.font = `bold ${size}px "Arial Black", sans-serif`;
+  g.shadowColor = `hsl(${hue} 100% 60%)`;
   g.shadowBlur = 36;
   g.fillStyle = '#fff';
-  g.fillText('CLAW CLUB', 512, 150);
+  g.fillText(title, 512, 150);
   g.shadowBlur = 0;
   g.lineWidth = 6;
-  g.strokeStyle = '#6ff3ff';
-  g.strokeText('CLAW CLUB', 512, 150);
+  g.strokeStyle = `hsl(${(hue + 150) % 360} 100% 70%)`;
+  g.strokeText(title, 512, 150);
   g.font = 'bold 70px "Noto Sans TC","PingFang TC","Microsoft JhengHei",sans-serif';
   g.shadowColor = '#41e8ff';
   g.shadowBlur = 20;
   g.fillStyle = '#fff6b8';
-  g.fillText('夾 娃 娃 樂 園', 512, 296);
+  g.fillText(sub, 512, 296);
   return tex(c);
 }
 

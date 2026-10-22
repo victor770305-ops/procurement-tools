@@ -1,5 +1,6 @@
 import * as THREE from 'three';
 import { CHUTE, CLAW, FIELD } from './config';
+import type { MachineTheme } from './layout';
 import {
   backdropTexture,
   diamondPlateTexture,
@@ -9,13 +10,15 @@ import {
   neonTexture,
 } from './textures';
 
-const mat = {
-  paint: new THREE.MeshPhysicalMaterial({ color: 0x14173a, roughness: 0.35, metalness: 0.2, clearcoat: 1, clearcoatRoughness: 0.12 }),
-  accent: new THREE.MeshPhysicalMaterial({ color: 0xff2f8e, roughness: 0.3, metalness: 0.1, clearcoat: 1, clearcoatRoughness: 0.1 }),
-  dark: new THREE.MeshStandardMaterial({ color: 0x07070d, roughness: 0.8, metalness: 0.2 }),
-  chrome: new THREE.MeshStandardMaterial({ color: 0xdfe3ee, roughness: 0.16, metalness: 1 }),
-  rubber: new THREE.MeshStandardMaterial({ color: 0x15151a, roughness: 0.9 }),
-};
+function makeMats(accent: number) {
+  return {
+    paint: new THREE.MeshPhysicalMaterial({ color: 0x14173a, roughness: 0.35, metalness: 0.2, clearcoat: 1, clearcoatRoughness: 0.12 }),
+    accent: new THREE.MeshPhysicalMaterial({ color: accent, roughness: 0.3, metalness: 0.1, clearcoat: 1, clearcoatRoughness: 0.1 }),
+    dark: new THREE.MeshStandardMaterial({ color: 0x07070d, roughness: 0.8, metalness: 0.2 }),
+    chrome: new THREE.MeshStandardMaterial({ color: 0xdfe3ee, roughness: 0.16, metalness: 1 }),
+    rubber: new THREE.MeshStandardMaterial({ color: 0x15151a, roughness: 0.9 }),
+  };
+}
 
 export class Cabinet {
   readonly group = new THREE.Group();
@@ -32,7 +35,10 @@ export class Cabinet {
   private display = makeDisplay();
   private tmpColor = new THREE.Color();
 
-  constructor(shadowSize: number) {
+  private mat: ReturnType<typeof makeMats>;
+
+  constructor(shadowSize: number, private theme: MachineTheme) {
+    this.mat = makeMats(theme.accent);
     this.buildShell();
     this.buildFloorAndChute();
     this.buildGlass();
@@ -51,14 +57,10 @@ export class Cabinet {
     this.spot.shadow.radius = 4;
     this.group.add(this.spot, this.spot.target);
 
-    // 內部補光(粉、青)讓材質有色彩層次
-    const pink = new THREE.PointLight(0xff4aa8, 0.9, 3, 2);
-    pink.position.set(-0.6, 1.3, 0.5);
-    const cyan = new THREE.PointLight(0x4ad8ff, 0.9, 3, 2);
-    cyan.position.set(0.6, 1.3, 0.5);
-    const fill = new THREE.PointLight(0xffe4c8, 0.8, 2.5, 2);
-    fill.position.set(0, 0.9, 0.5);
-    this.group.add(pink, cyan, fill);
+    // 內部補光:一盞主題色點光源
+    const tint = new THREE.PointLight(theme.accent, 1.6, 3.2, 2);
+    tint.position.set(0, 1.0, 0.5);
+    this.group.add(tint);
   }
 
   private add(geo: THREE.BufferGeometry, m: THREE.Material, x: number, y: number, z: number, parent: THREE.Object3D = this.group, shadow = true) {
@@ -76,25 +78,25 @@ export class Cabinet {
 
   private buildShell() {
     // 底座外殼(四面牆,中空以便挖出出口)
-    this.box(0.1, 0.95, 1.4, mat.paint, -0.8, -0.475, 0);
-    this.box(0.1, 0.95, 1.4, mat.paint, 0.8, -0.475, 0);
-    this.box(1.5, 0.95, 0.1, mat.paint, 0, -0.475, -0.65);
-    this.box(1.5, 0.95, 0.1, mat.paint, 0, -0.475, 0.65);
-    this.box(1.7, 0.05, 1.4, mat.dark, 0, -0.925, 0);
+    this.box(0.1, 0.95, 1.4, this.mat.paint, -0.8, -0.475, 0);
+    this.box(0.1, 0.95, 1.4, this.mat.paint, 0.8, -0.475, 0);
+    this.box(1.5, 0.95, 0.1, this.mat.paint, 0, -0.475, -0.65);
+    this.box(1.5, 0.95, 0.1, this.mat.paint, 0, -0.475, 0.65);
+    this.box(1.7, 0.05, 1.4, this.mat.dark, 0, -0.925, 0);
     // 底座粉色飾條
-    this.box(1.72, 0.04, 1.42, mat.accent, 0, -0.93, 0);
+    this.box(1.72, 0.04, 1.42, this.mat.accent, 0, -0.93, 0);
 
     // 四根角柱
     for (const sx of [-1, 1]) for (const sz of [-1, 1]) {
-      this.box(0.1, 1.6, 0.1, mat.paint, sx * 0.8, 0.8, sz * 0.65);
+      this.box(0.1, 1.6, 0.1, this.mat.paint, sx * 0.8, 0.8, sz * 0.65);
     }
     // 招牌箱
-    this.box(1.7, 0.66, 1.4, mat.paint, 0, 1.93, 0);
-    this.box(1.72, 0.05, 1.42, mat.accent, 0, 1.62, 0);
-    this.box(1.72, 0.05, 1.42, mat.accent, 0, 2.26, 0);
+    this.box(1.7, 0.66, 1.4, this.mat.paint, 0, 1.93, 0);
+    this.box(1.72, 0.05, 1.42, this.mat.accent, 0, 1.62, 0);
+    this.box(1.72, 0.05, 1.42, this.mat.accent, 0, 2.26, 0);
     const sign = new THREE.Mesh(
       new THREE.PlaneGeometry(1.56, 0.58),
-      new THREE.MeshBasicMaterial({ map: marqueeTexture(), toneMapped: false }),
+      new THREE.MeshBasicMaterial({ map: marqueeTexture(this.theme.title, this.theme.sub, this.theme.hue), toneMapped: false }),
     );
     sign.position.set(0, 1.94, 0.705);
     this.group.add(sign);
@@ -138,8 +140,8 @@ export class Cabinet {
     this.box(0.03, CHUTE.depth, cd, chuteMat, CHUTE.x1 + 0.015, -CHUTE.depth / 2, cz);
     this.box(cw, CHUTE.depth, 0.03, chuteMat, cx, -CHUTE.depth / 2, CHUTE.z0 + 0.015);
     // 出口擋板
-    this.box(0.04, 0.14, cd, mat.chrome, CHUTE.x1 + 0.02, 0.07, cz);
-    this.box(cw, 0.14, 0.04, mat.chrome, cx, 0.07, CHUTE.z0 - 0.02);
+    this.box(0.04, 0.14, cd, this.mat.chrome, CHUTE.x1 + 0.02, 0.07, cz);
+    this.box(cw, 0.14, 0.04, this.mat.chrome, cx, 0.07, CHUTE.z0 - 0.02);
     // 出口邊框的發光環
     const ring = new THREE.Mesh(
       new THREE.PlaneGeometry(cw, cd),
@@ -160,9 +162,7 @@ export class Cabinet {
     );
     rim2.position.set(CHUTE.x1 + 0.02, 0.146, cz);
     this.group.add(rim2);
-    const chuteLight = new THREE.PointLight(0x7ffcff, 1.2, 1.2, 2);
-    chuteLight.position.set(cx, -0.2, cz);
-    this.group.add(chuteLight);
+    
   }
 
   private buildGlass() {
@@ -204,41 +204,41 @@ export class Cabinet {
   private buildGantry() {
     // 兩側軌道
     for (const s of [-1, 1]) {
-      this.add(new THREE.CylinderGeometry(0.014, 0.014, 1.2, 12), mat.chrome, s * 0.7, CLAW.gantryY, 0, this.group, false).rotation.x = Math.PI / 2;
+      this.add(new THREE.CylinderGeometry(0.014, 0.014, 1.2, 12), this.mat.chrome, s * 0.7, CLAW.gantryY, 0, this.group, false).rotation.x = Math.PI / 2;
     }
-    this.beam = this.box(1.5, 0.06, 0.08, mat.chrome, 0, CLAW.gantryY, 0);
-    this.trolley = this.box(0.16, 0.11, 0.14, mat.accent, 0, CLAW.gantryY - 0.02, 0);
-    this.rope = this.add(new THREE.CylinderGeometry(0.006, 0.006, 1, 8), mat.rubber, 0, 1, 0, this.group, true);
+    this.beam = this.box(1.5, 0.06, 0.08, this.mat.chrome, 0, CLAW.gantryY, 0);
+    this.trolley = this.box(0.16, 0.11, 0.14, this.mat.accent, 0, CLAW.gantryY - 0.02, 0);
+    this.rope = this.add(new THREE.CylinderGeometry(0.006, 0.006, 1, 8), this.mat.rubber, 0, 1, 0, this.group, true);
   }
 
   private buildDeck() {
     // 底座前方的操作台
-    this.box(1.7, 0.78, 0.42, mat.paint, 0, -0.56, 0.91);
+    this.box(1.7, 0.78, 0.42, this.mat.paint, 0, -0.56, 0.91);
     const plate = new THREE.Group();
     plate.position.set(0, -0.14, 0.9);
     plate.rotation.x = 0.3;
     this.group.add(plate);
-    this.box(1.7, 0.06, 0.46, mat.accent, 0, 0, 0, plate);
+    this.box(1.7, 0.06, 0.46, this.mat.accent, 0, 0, 0, plate);
     this.box(1.5, 0.062, 0.36, new THREE.MeshPhysicalMaterial({ color: 0x0f1230, roughness: 0.4, metalness: 0.3, clearcoat: 1 }), 0, 0.001, 0, plate);
 
     // 搖桿
     const jx = 0.3;
-    this.add(new THREE.CylinderGeometry(0.075, 0.085, 0.03, 32), mat.chrome, jx, 0.04, 0, plate);
+    this.add(new THREE.CylinderGeometry(0.075, 0.085, 0.03, 32), this.mat.chrome, jx, 0.04, 0, plate);
     this.joyStick.position.set(jx, 0.05, 0);
     plate.add(this.joyStick);
-    const shaft = this.add(new THREE.CylinderGeometry(0.011, 0.011, 0.17, 12), mat.chrome, 0, 0.085, 0, this.joyStick);
+    const shaft = this.add(new THREE.CylinderGeometry(0.011, 0.011, 0.17, 12), this.mat.chrome, 0, 0.085, 0, this.joyStick);
     const ballMat = new THREE.MeshPhysicalMaterial({ color: 0xe5173f, roughness: 0.2, clearcoat: 1, clearcoatRoughness: 0.05 });
     this.joyBall = this.add(new THREE.SphereGeometry(0.048, 32, 24), ballMat, 0, 0.19, 0, this.joyStick);
     shaft.castShadow = true;
 
     // 抓取按鈕
     const bx = 0.62;
-    this.add(new THREE.CylinderGeometry(0.095, 0.1, 0.04, 40), mat.chrome, bx, 0.04, 0, plate);
+    this.add(new THREE.CylinderGeometry(0.095, 0.1, 0.04, 40), this.mat.chrome, bx, 0.04, 0, plate);
     this.dropMat = new THREE.MeshStandardMaterial({ color: 0xff3a3a, emissive: 0xff1010, emissiveIntensity: 0.25, roughness: 0.25 });
     this.dropBtn = this.add(new THREE.CylinderGeometry(0.075, 0.08, 0.045, 40), this.dropMat, bx, 0.075, 0, plate);
 
     // 投幣孔 + 螢幕
-    this.box(0.09, 0.012, 0.14, mat.dark, -0.4, 0.034, 0.1, plate);
+    this.box(0.09, 0.012, 0.14, this.mat.dark, -0.4, 0.034, 0.1, plate);
     this.box(0.012, 0.014, 0.1, new THREE.MeshBasicMaterial({ color: new THREE.Color(2.2, 1.7, 0.2), toneMapped: false }), -0.4, 0.04, 0.1, plate);
     const scr = new THREE.Mesh(new THREE.PlaneGeometry(0.34, 0.128), new THREE.MeshBasicMaterial({ map: this.display.texture, toneMapped: false }));
     scr.rotation.x = -Math.PI / 2;
@@ -247,15 +247,15 @@ export class Cabinet {
     this.setDisplay('CREDIT', '000');
 
     // 前方取物口
-    this.box(0.5, 0.36, 0.02, mat.dark, -0.55, -0.62, 1.12);
+    this.box(0.5, 0.36, 0.02, this.mat.dark, -0.55, -0.62, 1.12);
     const flap = new THREE.Mesh(
       new THREE.PlaneGeometry(0.44, 0.3),
       new THREE.MeshPhysicalMaterial({ color: 0x9fd8ff, transparent: true, opacity: 0.25, roughness: 0.1, clearcoat: 1 }),
     );
     flap.position.set(-0.55, -0.62, 1.125);
     this.group.add(flap);
-    this.box(0.54, 0.02, 0.03, mat.accent, -0.55, -0.43, 1.12);
-    this.box(0.54, 0.02, 0.03, mat.accent, -0.55, -0.81, 1.12);
+    this.box(0.54, 0.02, 0.03, this.mat.accent, -0.55, -0.43, 1.12);
+    this.box(0.54, 0.02, 0.03, this.mat.accent, -0.55, -0.81, 1.12);
   }
 
   private buildLeds() {

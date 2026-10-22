@@ -8,21 +8,34 @@ import { BASE_HEIGHT } from './config';
 
 export const isMobile = matchMedia('(pointer: coarse)').matches || Math.min(innerWidth, innerHeight) < 600;
 
-export type CamPreset = 'front' | 'side' | 'top';
+export type CamPreset = 'store' | 'front' | 'top';
 
-const PRESETS: Record<CamPreset, { dir: THREE.Vector3; dist: number; target: THREE.Vector3; halfW: number }> = {
-  front: { dir: new THREE.Vector3(0, 0.12, 1).normalize(), dist: 6.5, target: new THREE.Vector3(0, 1.5, 0.3), halfW: 1.3 },
-  side: { dir: new THREE.Vector3(1, 0.2, 0.18).normalize(), dist: 4.6, target: new THREE.Vector3(0, BASE_HEIGHT + 0.8, 0.1), halfW: 1.0 },
-  top: { dir: new THREE.Vector3(0, 0.62, 1).normalize(), dist: 3.7, target: new THREE.Vector3(0, BASE_HEIGHT + 0.55, 0.25), halfW: 1.0 },
+interface PresetCfg {
+  dir: THREE.Vector3;
+  dist: number;
+  target: THREE.Vector3;
+  halfW: number;
+  fov: number;
+  /** 是否跟著選取的機台左右移動 */
+  follow: boolean;
+}
+
+const PRESETS: Record<CamPreset, PresetCfg> = {
+  store: { dir: new THREE.Vector3(0.04, 0.3, 1).normalize(), dist: 10.2, target: new THREE.Vector3(1.0, 1.0, 1.6), halfW: 7.0, fov: 42, follow: false },
+  front: { dir: new THREE.Vector3(0, 0.27, 1).normalize(), dist: 6.2, target: new THREE.Vector3(0.1, 1.5, 0.3), halfW: 1.5, fov: 36, follow: true },
+  top: { dir: new THREE.Vector3(0, 0.62, 1).normalize(), dist: 3.9, target: new THREE.Vector3(0.1, BASE_HEIGHT + 0.55, 0.25), halfW: 1.2, fov: 36, follow: true },
 };
 
 export class Renderer {
   readonly renderer: THREE.WebGLRenderer;
   readonly scene = new THREE.Scene();
-  readonly camera = new THREE.PerspectiveCamera(36, 1, 0.1, 80);
+  readonly camera = new THREE.PerspectiveCamera(42, 1, 0.1, 90);
   private composer: EffectComposer;
   private bloom: UnrealBloomPass;
-  private preset: CamPreset = 'front';
+  private preset: CamPreset = 'store';
+  private focusX = 0;
+  private inset = 0;
+  private curFov = 42;
   private curPos = new THREE.Vector3();
   private curTarget = new THREE.Vector3();
   private pointer = new THREE.Vector2();
@@ -41,7 +54,7 @@ export class Renderer {
     this.renderer = r;
 
     this.scene.background = new THREE.Color(0x07050f);
-    this.scene.fog = new THREE.FogExp2(0x0a0716, 0.045);
+    this.scene.fog = new THREE.FogExp2(0x0a0716, 0.026);
     const pm = new THREE.PMREMGenerator(r);
     this.scene.environment = pm.fromScene(new RoomEnvironment(), 0.04).texture;
     this.scene.environmentIntensity = 0.55;
@@ -61,7 +74,7 @@ export class Renderer {
   }
 
   get shadowSize() {
-    return isMobile ? 1024 : 2048;
+    return isMobile ? 512 : 1024;
   }
 
   resize() {
@@ -70,21 +83,51 @@ export class Renderer {
     this.renderer.setSize(w, h, false);
     this.composer.setSize(w, h);
     this.camera.aspect = w / h;
-    this.camera.updateProjectionMatrix();
+    this.applyView();
   }
 
   setPreset(p: CamPreset) {
     this.preset = p;
   }
 
+  get currentPreset() {
+    return this.preset;
+  }
+
+  /** 左側被面板蓋住的寬度(px):店面會平移到剩餘空間置中 */
+  setLeftInset(px: number) {
+    if (px === this.inset) return;
+    this.inset = px;
+    this.applyView();
+  }
+
+  private applyView() {
+    const w = innerWidth;
+    const h = innerHeight;
+    if (this.inset > 0) this.camera.setViewOffset(w, h, -this.inset / 2, 0, w, h);
+    else this.camera.clearViewOffset();
+    this.camera.updateProjectionMatrix();
+  }
+
+  /** 聚焦的機台 X 座標 */
+  setFocusX(x: number) {
+    this.focusX = x;
+  }
+
   private compute(p: CamPreset, outPos: THREE.Vector3, outTarget: THREE.Vector3) {
     const cfg = PRESETS[p];
-    // 直向螢幕時拉遠,確保機台完整入鏡
-    const tanH = Math.tan(THREE.MathUtils.degToRad(this.camera.fov) / 2);
-    const visibleHalfW = cfg.dist * tanH * this.camera.aspect;
-    const f = Math.max(1, cfg.halfW / visibleHalfW);
+    // 直向螢幕時拉遠,確保想看的範圍完整入鏡
+    const tanH = Math.tan(THREE.MathUtils.degToRad(cfg.fov) / 2);
+    const aspect = (innerWidth - this.inset) / innerHeight;
+    // 直向螢幕的全店視角只顯示機台列與櫃台
+    const portraitStore = p === 'store' && aspect < 1;
+    const halfW = portraitStore ? 5.0 : cfg.halfW;
+    const visibleHalfW = cfg.dist * tanH * aspect;
+    const f = Math.max(1, halfW / visibleHalfW);
     outTarget.copy(cfg.target);
-    outPos.copy(cfg.target).addScaledVector(cfg.dir, cfg.dist * f);
+    if (portraitStore) outTarget.x = 1.3;
+    if (cfg.follow) outTarget.x += this.focusX;
+    outPos.copy(outTarget).addScaledVector(cfg.dir, cfg.dist * f);
   }
 
   update(dt: number, t: number) {
@@ -97,6 +140,12 @@ export class Renderer {
     const k = 1 - Math.exp(-dt * 3.5);
     this.curPos.lerp(this.tmpPos, k);
     this.curTarget.lerp(this.tmpTarget, k);
+    const wantFov = PRESETS[this.preset].fov;
+    if (Math.abs(wantFov - this.curFov) > 0.01) {
+      this.curFov += (wantFov - this.curFov) * k;
+      this.camera.fov = this.curFov;
+      this.camera.updateProjectionMatrix();
+    }
     // 滑鼠視差 + 微呼吸感
     this.pointerSmooth.lerp(this.pointer, 1 - Math.exp(-dt * 3));
     const px = this.pointerSmooth.x * 0.22 + Math.sin(t * 0.3) * 0.02;
