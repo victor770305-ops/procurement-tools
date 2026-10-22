@@ -1,0 +1,139 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover" />
+  <meta name="theme-color" content="#07050f" />
+  <title>夾娃娃樂園</title>
+  <style>
+    :root {
+      --glass: rgba(18, 14, 38, 0.62);
+      --line: rgba(255, 255, 255, 0.14);
+      --pink: #ff3d9a;
+      --cyan: #41e8ff;
+      --text: #f4f1ff;
+      --muted: #a9a3c8;
+    }
+    * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+    html, body { margin: 0; height: 100%; background: #07050f; overflow: hidden; overscroll-behavior: none; touch-action: none;
+      font-family: "Noto Sans TC", "PingFang TC", "Microsoft JhengHei", system-ui, sans-serif; color: var(--text); user-select: none; -webkit-user-select: none; }
+    canvas#view { position: fixed; inset: 0; width: 100%; height: 100%; display: block; }
+
+    .panel { background: var(--glass); border: 1px solid var(--line); border-radius: 16px; backdrop-filter: blur(14px); -webkit-backdrop-filter: blur(14px); }
+    #hud { position: fixed; inset: 0; pointer-events: none; padding: max(12px, env(safe-area-inset-top)) max(12px, env(safe-area-inset-right)) max(12px, env(safe-area-inset-bottom)) max(12px, env(safe-area-inset-left)); }
+    #hud > * { pointer-events: auto; }
+
+    #top { position: absolute; left: 12px; right: 12px; top: max(12px, env(safe-area-inset-top)); display: flex; justify-content: space-between; gap: 10px; pointer-events: none; }
+    #top > * { pointer-events: auto; }
+    .stats { display: flex; gap: 8px; }
+    .chip { display: flex; align-items: center; gap: 8px; padding: 8px 14px; font-weight: 700; font-variant-numeric: tabular-nums; font-size: 15px; }
+    .chip small { color: var(--muted); font-weight: 500; font-size: 11px; display: block; line-height: 1; margin-bottom: 2px; }
+    .chip .ico { font-size: 20px; }
+    #timer { min-width: 76px; justify-content: center; }
+    #timer.low { color: #ff6b6b; animation: blink 0.6s infinite; }
+    @keyframes blink { 50% { opacity: 0.4; } }
+
+    .btns { display: flex; gap: 8px; }
+    .icon-btn { width: 44px; height: 44px; display: grid; place-items: center; font-size: 19px; border-radius: 14px; cursor: pointer; color: var(--text); font-family: inherit; }
+    .icon-btn.on { border-color: var(--cyan); box-shadow: 0 0 14px rgba(65, 232, 255, 0.35); }
+    .icon-btn:active { transform: scale(0.94); }
+
+    #msg { position: absolute; left: 50%; top: 70px; transform: translate(-50%, 0); padding: 12px 22px; font-size: 20px; font-weight: 800; text-align: center; opacity: 0; transition: opacity 0.25s, transform 0.25s; pointer-events: none !important; white-space: nowrap; letter-spacing: 1px; text-shadow: 0 0 12px rgba(255, 61, 154, 0.7); }
+    #msg.show { opacity: 1; transform: translate(-50%, 8px); }
+
+    #start { position: absolute; left: 50%; bottom: 7%; transform: translateX(-50%); padding: 16px 30px; font-size: 20px; font-weight: 800; color: #fff; border: 0; border-radius: 999px; cursor: pointer; font-family: inherit;
+      background: linear-gradient(135deg, #ff3d9a, #ff7a3d); box-shadow: 0 8px 30px rgba(255, 61, 154, 0.5), inset 0 1px 0 rgba(255, 255, 255, 0.4); animation: pop 1.6s ease-in-out infinite; }
+    #start[hidden] { display: none; }
+    #start small { display: block; font-size: 12px; font-weight: 500; opacity: 0.9; margin-top: 2px; }
+    @keyframes pop { 50% { transform: translateX(-50%) scale(1.05); } }
+
+    #controls { position: absolute; left: 0; right: 0; bottom: 0; padding: 0 max(18px, env(safe-area-inset-right)) max(18px, env(safe-area-inset-bottom)) max(18px, env(safe-area-inset-left)); display: flex; justify-content: space-between; align-items: flex-end; pointer-events: none; }
+    #controls > * { pointer-events: auto; }
+    #joy { width: 132px; height: 132px; border-radius: 50%; position: relative; display: grid; place-items: center; touch-action: none; }
+    #joy::before { content: ''; position: absolute; inset: 0; border-radius: 50%; background: radial-gradient(circle, rgba(255, 255, 255, 0.08), rgba(255, 255, 255, 0.02)); border: 1px solid var(--line); }
+    #joy .arrow { position: absolute; color: rgba(255, 255, 255, 0.35); font-size: 12px; }
+    #knob { width: 56px; height: 56px; border-radius: 50%; background: radial-gradient(circle at 35% 30%, #ff7d95, #e5173f 60%, #8f0d27); box-shadow: 0 6px 16px rgba(0, 0, 0, 0.5), inset 0 -3px 6px rgba(0, 0, 0, 0.3); position: relative; }
+    #dropbtn { width: 104px; height: 104px; border-radius: 50%; border: 0; cursor: pointer; font-family: inherit; font-weight: 900; font-size: 18px; color: #fff; letter-spacing: 1px;
+      background: radial-gradient(circle at 35% 28%, #ff8e8e, #ff3a3a 55%, #a31212); box-shadow: 0 10px 28px rgba(255, 58, 58, 0.45), inset 0 -5px 10px rgba(0, 0, 0, 0.3); touch-action: none; }
+    #dropbtn:active { transform: scale(0.95); }
+    #dropbtn:disabled { filter: grayscale(0.8) brightness(0.6); box-shadow: none; }
+    .hint { position: absolute; left: 50%; bottom: 4px; transform: translateX(-50%); color: var(--muted); font-size: 12px; text-align: center; pointer-events: none !important; }
+    @media (pointer: coarse) { .hint { display: none; } }
+
+    #settings { position: absolute; left: 12px; top: 74px; width: 232px; padding: 14px; font-size: 13px; }
+    #settings[hidden] { display: none; }
+    #settings h3 { margin: 0 0 10px; font-size: 13px; color: var(--cyan); letter-spacing: 1px; }
+    #settings label { display: flex; justify-content: space-between; margin: 8px 0 4px; color: var(--muted); }
+    #settings input[type=range] { width: 100%; accent-color: var(--pink); }
+    #settings .row { display: flex; justify-content: space-between; margin-top: 8px; }
+    #settings b { color: var(--text); }
+
+    #prizes { position: absolute; right: 12px; top: 74px; display: flex; flex-direction: column; gap: 6px; align-items: flex-end; pointer-events: none !important; }
+    .prize { padding: 6px 12px; border-radius: 999px; font-size: 13px; font-weight: 700; display: flex; gap: 6px; align-items: center; animation: slidein 0.4s ease; }
+    @keyframes slidein { from { opacity: 0; transform: translateX(30px); } }
+
+    #loading { position: fixed; inset: 0; z-index: 9; display: grid; place-items: center; background: #07050f; transition: opacity 0.6s; text-align: center; }
+    #loading.done { opacity: 0; pointer-events: none; }
+    #loading .logo { font-size: 34px; font-weight: 900; letter-spacing: 3px; background: linear-gradient(90deg, var(--pink), var(--cyan)); -webkit-background-clip: text; background-clip: text; color: transparent; }
+    #loading p { color: var(--muted); font-size: 13px; margin-top: 10px; }
+
+    @media (max-width: 520px) {
+      #top { left: 8px; right: 8px; gap: 6px; }
+      .stats { gap: 5px; }
+      .chip { padding: 6px 9px; font-size: 14px; gap: 5px; border-radius: 13px; }
+      .chip small { display: none; }
+      .chip .ico { font-size: 17px; }
+      #timer { min-width: 0; }
+      .btns { gap: 5px; }
+      .icon-btn { width: 38px; height: 38px; font-size: 16px; border-radius: 12px; }
+      #msg { font-size: 16px; top: 62px; white-space: normal; width: max-content; max-width: 88vw; }
+      #settings { top: 66px; left: 8px; }
+      #prizes { top: 66px; right: 8px; }
+      #joy { width: 120px; height: 120px; }
+      #dropbtn { width: 94px; height: 94px; }
+      #start { bottom: 19%; font-size: 17px; padding: 14px 24px; }
+    }
+  </style>
+</head>
+<body>
+  <canvas id="view"></canvas>
+
+  <div id="hud">
+    <div id="top">
+      <div class="stats">
+        <div class="panel chip"><span class="ico">🪙</span><div><small>代幣</small><span id="coins">10</span></div></div>
+        <div class="panel chip"><span class="ico">🧸</span><div><small>戰利品</small><span id="prizeCount">0</span></div></div>
+        <div class="panel chip" id="timer"><span class="ico">⏱</span><div><small>倒數</small><span id="time">--</span></div></div>
+      </div>
+      <div class="btns">
+        <button class="panel icon-btn" id="btnCam" title="切換視角">🎥</button>
+        <button class="panel icon-btn" id="btnCfg" title="機台設定">⚙️</button>
+        <button class="panel icon-btn" id="btnSnd" title="音效">🔊</button>
+      </div>
+    </div>
+
+    <div id="settings" class="panel" hidden>
+      <h3>機台營運設定（預覽）</h3>
+      <label><span>爪力</span><b id="strVal">55%</b></label>
+      <input type="range" id="strength" min="15" max="95" value="55" />
+      <div class="row"><span>預估成功率</span><b id="winRate">55%</b></div>
+      <div class="row"><span>單次投幣</span><b>1 🪙</b></div>
+      <div class="row"><span>場內娃娃</span><b id="stock">0</b></div>
+      <div class="row"><button id="btnRefill" class="panel" style="color:inherit;padding:6px 10px;cursor:pointer;font-family:inherit">補貨</button><button id="btnCoin" class="panel" style="color:inherit;padding:6px 10px;cursor:pointer;font-family:inherit">+10 代幣</button></div>
+    </div>
+
+    <div id="prizes"></div>
+    <div id="msg" class="panel"></div>
+    <button id="start">投幣開始<small>1 🪙 / 次 · 空白鍵</small></button>
+
+    <div id="controls">
+      <div id="joy"><span class="arrow" style="top:8px">▲</span><span class="arrow" style="bottom:8px">▼</span><span class="arrow" style="left:10px">◀</span><span class="arrow" style="right:10px">▶</span><div id="knob"></div></div>
+      <button id="dropbtn">放爪</button>
+    </div>
+    <div class="hint">方向鍵 / WASD 移動 · 空白鍵放爪 · 也可用畫面搖桿</div>
+  </div>
+
+  <div id="loading"><div><div class="logo">CLAW CLUB</div><p>正在整理娃娃…</p></div></div>
+  <script type="module" src="/src/main.ts"></script>
+</body>
+</html>
