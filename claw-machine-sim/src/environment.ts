@@ -10,6 +10,7 @@ export interface Store {
   setShelfStock(n: number): void;
   /** 廁所髒污程度 0~1 */
   setWcDirt(id: 'wcF' | 'wcM', dirt: number): void;
+  setRetail(drink: number, snack: number): void;
 }
 
 const std = (c: number, rough = 0.7, metal = 0) => new THREE.MeshStandardMaterial({ color: c, roughness: rough, metalness: metal });
@@ -206,5 +207,6 @@ export function buildStore(): Store {
     group: g,
     setShelfStock: (n: number) => back.setStock(n),
     setWcDirt: (id, d) => back.setWcDirt(id, d),
+    setRetail: (d, s) => back.setRetail(d, s),
   };
 }

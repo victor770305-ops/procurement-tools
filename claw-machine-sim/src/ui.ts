@@ -1,6 +1,6 @@
 import * as THREE from 'three';
 import type { Character } from './characters';
-import { PACKS, Pack, RUSH_FEE } from './economy';
+import { PACKS, Pack, RETAIL, RUSH_FEE, RetailKind } from './economy';
 import { Expression, portrait } from './portrait';
 import type { Marker } from './game';
 
@@ -342,6 +342,23 @@ export class Hud {
       ? o.ships.map((x) => `<div class="srow"><span>${x.dir === 'in' ? '📥' : '📤'} ${x.label}</span><span>${x.state}${x.state === '卸貨中' || x.state === '裝車中' ? ` · 剩 ${x.left}/${x.boxes} 箱` : ''}</span></div>`).join('')
       : '<div class="empty">目前沒有運送中的貨</div>';
     ($('btnShelve') as HTMLButtonElement).disabled = !o.canShelve;
+  }
+
+  renderRetail(shown: Record<RetailKind, number>, back: Record<RetailKind, number>, cash: number, onBuy: (k: RetailKind) => void) {
+    const el = $('retailList');
+    el.innerHTML = '';
+    for (const k of ['drink', 'snack'] as RetailKind[]) {
+      const r = RETAIL[k];
+      const d = document.createElement('div');
+      d.className = 'pack';
+      d.innerHTML = `<div><b>${r.icon} ${r.name}補給箱 ${r.box} 件</b><span>展示 ${shown[k]}/${r.cap} · 備貨 ${back[k]} · 售價 NT$ ${r.price}、成本 ${r.cost}</span></div>`;
+      const b = document.createElement('button');
+      b.textContent = `NT$ ${fmt(r.boxPrice)}`;
+      b.disabled = cash < r.boxPrice;
+      b.addEventListener('click', () => onBuy(k));
+      d.appendChild(b);
+      el.appendChild(d);
+    }
   }
 
   openShop(open: boolean) {

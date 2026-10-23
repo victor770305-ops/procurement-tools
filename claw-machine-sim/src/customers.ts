@@ -7,6 +7,8 @@ import { DOOR_IN, DOOR_OUT, MAX_LINE, route } from './layout';
 import type { Machine, Prize } from './machine';
 import type { Spill } from './events';
 import { Restroom } from './facilities';
+import { RETAIL_SPOTS } from './layout';
+import type { RetailKind } from './economy';
 
 export type Kind = ArchKind;
 
@@ -37,7 +39,7 @@ const rnd = (a: number, b: number) => a + Math.random() * (b - a);
 const pick = <T,>(a: T[]) => a[Math.floor(Math.random() * a.length)];
 
 export type LeaveReason = 'done' | 'angry' | 'impatient' | 'closed' | 'nostock';
-export type CustState = 'exchange' | 'buying' | 'machine' | 'playing' | 'wc' | 'leaving';
+export type CustState = 'exchange' | 'buying' | 'machine' | 'playing' | 'wc' | 'shop' | 'leaving';
 export type HelpKind = 'assist' | 'retrieve' | 'exchange';
 
 export class Customer {
@@ -67,6 +69,8 @@ export class Customer {
   wcSteps: { pos: THREE.Vector3; dwell: number }[] = [];
   wcStep = 0;
   wcT = -1;
+  shopKind: RetailKind | null = null;
+  shopT = -1;
   readonly dest = new THREE.Vector3(1e9, 0, 1e9);
   path: THREE.Vector3[] = [];
   readonly slippedOn = new Set<Spill>();
@@ -134,6 +138,8 @@ export interface ManagerHooks {
   onExchangeEmpty(ex: Exchange): void;
   onExchangeLow(ex: Exchange): void;
   onCounterServed(): void;
+  retailStock(kind: RetailKind): number;
+  onRetailSale(c: Customer, kind: RetailKind): void;
   onWcUse(room: Restroom): void;
   onWcGross(c: Customer, room: Restroom): void;
   log(text: string, kind: 'customer' | 'sale' | 'win' | 'alert'): void;
@@ -446,6 +452,7 @@ export class CustomerManager {
       this.joinExchange(c, this.pickExchange());
       return;
     }
+    if (this.hooks.isOpen() && c.mood > 0.2 && Math.random() < 0.38 && this.startShop(c)) return;
     c.say(c.mood > 0.3 ? '玩得開心!👋' : '回家囉…', 2);
     this.leave(c, 'done');
   }
@@ -471,6 +478,37 @@ export class CustomerManager {
     c.wins++;
     c.say('拿到了!謝謝🧸', 2.4);
     this.afterRound(m, c, false);
+  }
+
+  // ---------- 逛冰箱與展示架 ----------
+  private startShop(c: Customer): boolean {
+    const opts = (['drink', 'snack'] as RetailKind[]).filter((k) => this.hooks.retailStock(k) > 0);
+    if (!opts.length) return false;
+    if (c.machine) {
+      const i = c.machine.line.indexOf(c);
+      if (i >= 0) c.machine.line.splice(i, 1);
+      c.machine = null;
+    }
+    c.shopKind = opts[Math.floor(Math.random() * opts.length)];
+    c.shopT = -1;
+    c.state = 'shop';
+    c.say(c.shopKind === 'drink' ? '來罐飲料~' : '看看有什麼周邊', 2);
+    return true;
+  }
+
+  private updateShop(c: Customer, dt: number) {
+    const k = c.shopKind!;
+    this.goTo(c, RETAIL_SPOTS[k].spot);
+    if (!this.atDest(c)) return;
+    if (c.shopT < 0) c.shopT = rnd(2.5, 4.5);
+    c.shopT -= dt;
+    if (c.shopT > 0) return;
+    if (this.hooks.retailStock(k) > 0) {
+      this.hooks.onRetailSale(c, k);
+      c.mood = Math.min(1, c.mood + 0.08);
+      c.say(k === 'drink' ? '好喝!🥤' : '買到了!🍿', 2);
+    } else c.say('賣完了…', 2);
+    this.leave(c, 'done');
   }
 
   // ---------- 上廁所 ----------
@@ -637,6 +675,7 @@ export class CustomerManager {
       const c = this.all[k];
       if (c.state === 'leaving') this.goTo(c, DOOR_OUT);
       else if (c.state === 'wc') this.updateWc(c, dt);
+      else if (c.state === 'shop') this.updateShop(c, dt);
       let pose: Pose = 'idle';
       if (c.slipT > 0) {
         c.slipT -= dt;

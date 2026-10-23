@@ -9,8 +9,10 @@ import { IDLE_SPOTS, cashierSpot, dockSpot, lockerSpot, route, shelfSpot } from 
 import { Machine, Prize, SERVICE_LABEL, ServiceKind } from './machine';
 import type { Logistics, Shipment } from './logistics';
 import type { Lounge, Restroom } from './facilities';
+import { RETAIL_SPOTS } from './layout';
+import type { RetailKind } from './economy';
 
-export type TaskKind = 'restock' | 'assist' | 'retrieve' | 'fix' | 'mop' | 'clean' | 'refill' | 'fixEx' | 'unload' | 'load' | 'cleanWc';
+export type TaskKind = 'restock' | 'assist' | 'retrieve' | 'fix' | 'mop' | 'clean' | 'refill' | 'fixEx' | 'unload' | 'load' | 'cleanWc' | 'stockRetail';
 type Step = 'toShelf' | 'toDock' | 'pickup' | 'go' | 'wait' | 'work';
 
 const PLAN: Record<TaskKind, Step[]> = {
@@ -25,8 +27,9 @@ const PLAN: Record<TaskKind, Step[]> = {
   unload: ['toDock', 'pickup', 'toShelf', 'work'],
   load: ['toShelf', 'pickup', 'toDock', 'work'],
   cleanWc: ['go', 'work'],
+  stockRetail: ['go', 'work'],
 };
-const WORK_TIME: Record<TaskKind, number> = { restock: 4.5, refill: 4, assist: 3.5, retrieve: 3.5, fix: 9, mop: 4, clean: 3.2, fixEx: 6, unload: 1.8, load: 1.8, cleanWc: 6 };
+const WORK_TIME: Record<TaskKind, number> = { restock: 4.5, refill: 4, assist: 3.5, retrieve: 3.5, fix: 9, mop: 4, clean: 3.2, fixEx: 6, unload: 1.8, load: 1.8, cleanWc: 6, stockRetail: 4 };
 export const TASK_LABEL: Record<TaskKind, string> = {
   restock: '補貨',
   assist: '協助客人',
@@ -39,6 +42,7 @@ export const TASK_LABEL: Record<TaskKind, string> = {
   unload: '卸貨入庫',
   load: '退貨裝車',
   cleanWc: '打掃廁所',
+  stockRetail: '補冰箱與展示架',
 };
 
 export interface Req {
@@ -53,6 +57,7 @@ export interface Req {
   ship?: Shipment;
   box?: number;
   wc?: Restroom;
+  retail?: RetailKind;
   claimed: Staff | null;
 }
 
@@ -69,7 +74,7 @@ const rnd = (a: number, b: number) => a + Math.random() * (b - a);
 const pick = <T,>(a: T[]) => a[Math.floor(Math.random() * a.length)];
 
 /** 各種工作主要看哪幾項能力(0 速度 1 細心 2 技術 3 親和 4 體力 5 抗壓) */
-const KIND_STAT: Record<TaskKind, number[]> = { restock: [0, 4], refill: [0, 4], assist: [3], retrieve: [1], fix: [2], mop: [1], clean: [1], fixEx: [2], unload: [4, 0], load: [4, 0], cleanWc: [1, 4] };
+const KIND_STAT: Record<TaskKind, number[]> = { restock: [0, 4], refill: [0, 4], assist: [3], retrieve: [1], fix: [2], mop: [1], clean: [1], fixEx: [2], unload: [4, 0], load: [4, 0], cleanWc: [1, 4], stockRetail: [0, 4] };
 
 export class Staff {
   readonly human: Human;
@@ -153,6 +158,8 @@ export interface StaffHooks {
   onLoad(): void;
   onWcClean(room: Restroom): void;
   onRest(): void;
+  retailNeeds(): RetailKind[];
+  onRetailStock(kind: RetailKind): void;
   log(text: string, kind: 'staff' | 'alert'): void;
 }
 
@@ -335,6 +342,10 @@ export class StaffManager {
       this.add(j.ship.dir === 'in' ? 'unload' : 'load', j.key, j.ship.dir === 'in' ? 66 : 52, { ship: j.ship, box: j.box });
       want.add(j.key);
     }
+    for (const k of this.hooks.retailNeeds()) {
+      this.add('stockRetail', `retail:${k}`, 30, { retail: k });
+      want.add(`retail:${k}`);
+    }
     for (const room of this.restrooms) {
       if (room.dirt < 0.55) continue;
       this.add('cleanWc', `wc:${room.id}`, room.dirt > 0.85 ? 62 : 38, { wc: room });
@@ -358,6 +369,7 @@ export class StaffManager {
     if (r.ex) return r.ex.servicePos();
     if (r.spill) return this.tmp.set(r.spill.pos.x + 0.9, 0, r.spill.pos.z + 0.4);
     if (r.wc) return r.wc.cleanSpot;
+    if (r.retail) return RETAIL_SPOTS[r.retail].spot;
     if (r.kind === 'unload') return dockSpot();
     if (r.kind === 'load') return shelfSpot();
     return IDLE_SPOTS[0];
@@ -557,7 +569,7 @@ export class StaffManager {
       t.t = 0;
     };
     const label = TASK_LABEL[r.kind];
-    const where = r.machine ? r.machine.name : r.ex ? `兌幣機${r.ex.index + 1}` : r.wc ? r.wc.name : r.ship ? (r.kind === 'unload' ? '倉庫' : '貨車') : '地板';
+    const where = r.machine ? r.machine.name : r.ex ? `兌幣機${r.ex.index + 1}` : r.wc ? r.wc.name : r.retail ? (r.retail === 'drink' ? '冰箱' : '展示架') : r.ship ? (r.kind === 'unload' ? '倉庫' : '貨車') : '地板';
     switch (step) {
       case 'toShelf': {
         s.action = `前往倉庫(${label})`;
@@ -642,6 +654,11 @@ export class StaffManager {
           s.reach.l.set(p.x + Math.sin(t.t * 4) * 0.35, 0.1, p.z + 0.35);
           s.reach.r.set(p.x + Math.sin(t.t * 4 + 0.5) * 0.35, 0.1, p.z + 0.45);
           this.face(s, 0, 1, dt);
+        } else if (r.retail) {
+          const p = RETAIL_SPOTS[r.retail];
+          s.reach.l.set(p.x + 0.45, 1.0 + Math.sin(t.t * 3) * 0.08, p.z - 0.2);
+          s.reach.r.set(p.x + 0.45, 0.8, p.z + 0.15);
+          this.face(s, -1, 0, dt);
         } else if (r.ship) {
           pose = 'idle';
           if (r.kind === 'unload') this.face(s, 0, -1, dt);
@@ -706,6 +723,10 @@ export class StaffManager {
       case 'load':
         this.logi.completeBox(r.ship!, r.box!, t.items);
         this.hooks.onLoad();
+        break;
+      case 'stockRetail':
+        this.hooks.onRetailStock(r.retail!);
+        this.hooks.log(`${s.name} 補了${r.retail === 'drink' ? '冰箱的飲料' : '展示架的商品'}`, 'staff');
         break;
       case 'cleanWc':
         r.wc!.dirt = 0;

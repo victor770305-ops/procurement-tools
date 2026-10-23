@@ -136,6 +136,11 @@ export const WC_LAYOUT: Record<'wcF' | 'wcM', { slots: WcSlot[]; sinks: THREE.Ve
     clean: new THREE.Vector3(-13.6, 0, 19.3),
   },
 };
+/** 前廳靠西牆的零售設備:冰箱與展示架,spot 是客人購物站位 */
+export const RETAIL_SPOTS = {
+  drink: { x: -8.95, z: 16.9, spot: new THREE.Vector3(-7.6, 0, 16.9) },
+  snack: { x: -8.95, z: 20.95, spot: new THREE.Vector3(-7.6, 0, 20.95) },
+};
 /** 員工休息室入口(店員上下班經過) */
 export const STAFF_DOOR = ROOMS.lounge.outside.clone();
 export const lockerSpot = () => new THREE.Vector3(12.4, 0, 14.0);

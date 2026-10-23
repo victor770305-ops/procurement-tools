@@ -3,7 +3,7 @@ import type { Sfx } from './audio';
 import { RARITY } from './config';
 import { Customer, CustomerManager, KINDS, LeaveReason } from './customers';
 import {
-  CAPACITY, DayStats, GameState, HOURS, OPEN_HOUR, OPEN_SECONDS, PACKS, Pack, RENT, RETURN_RATE, RUSH_FEE, SHIFT_NAMES, StockItem, WAGE_SHIFT,
+  CAPACITY, DayStats, RETAIL, RetailKind, GameState, HOURS, OPEN_HOUR, OPEN_SECONDS, PACKS, Pack, RENT, RETURN_RATE, RUSH_FEE, SHIFT_NAMES, StockItem, WAGE_SHIFT,
   clearSave, initialState, loadGame, newStats, rollRarity, saveGame, settle,
 } from './economy';
 import type { Store } from './environment';
@@ -213,6 +213,18 @@ export class Game {
       },
       onExchangeEmpty: (ex) => this.log(`🪙 兌幣機${ex.index + 1}沒有零錢了`, 'alert'),
       onExchangeLow: () => {},
+      retailStock: (k) => this.state.retail[k],
+      onRetailSale: (_c, k) => {
+        const r = RETAIL[k];
+        this.state.retail[k]--;
+        this.state.cash += r.price;
+        this.stats.revenue += r.price;
+        this.stats.cogs += r.cost;
+        this.stats.retailSold++;
+        this.stats.retailRev += r.price - r.cost;
+        d.sfx.coin();
+        this.refresh();
+      },
       onCounterServed: () => {
         this.stats.counterServed++;
       },
@@ -277,6 +289,13 @@ export class Game {
       },
       onRest: () => {
         this.stats.rests++;
+      },
+      retailNeeds: () => (['drink', 'snack'] as RetailKind[]).filter((k) => this.state.retailBack[k] > 0 && this.state.retail[k] <= RETAIL[k].cap * 0.3),
+      onRetailStock: (k) => {
+        const n = Math.min(RETAIL[k].cap - this.state.retail[k], this.state.retailBack[k]);
+        this.state.retail[k] += n;
+        this.state.retailBack[k] -= n;
+        this.refresh();
       },
       log: (t, k) => this.log(t, k),
     });
@@ -386,6 +405,8 @@ export class Game {
       (n) => this.returnStock(n),
     );
     store.setShelfStock(this.state.warehouse.length);
+    store.setRetail(this.state.retail.drink, this.state.retail.snack);
+    hud.renderRetail(this.state.retail, this.state.retailBack, this.state.cash, (k) => this.buyRetail(k));
   }
 
   private shipState(sh: import('./logistics').Shipment) {
@@ -509,6 +530,23 @@ export class Game {
     this.save();
   }
 
+  /** 進冰箱與展示架的備貨(放在倉庫,店員再補上架) */
+  buyRetail(k: RetailKind) {
+    const r = RETAIL[k];
+    if (this.state.cash < r.boxPrice) {
+      this.d.hud.say('現金不足', 1400);
+      return;
+    }
+    this.state.cash -= r.boxPrice;
+    this.stats.purchases += r.boxPrice;
+    this.state.retailBack[k] += r.box;
+    this.d.sfx.coin();
+    this.d.hud.say(`已進 ${r.name} ${r.box} 件,放在倉庫備貨`, 1800);
+    this.log(`🧾 進貨${r.name}補給箱(${money(r.boxPrice)})`, 'system');
+    this.refresh();
+    this.save();
+  }
+
   setCounter(on: boolean) {
     this.state.counterOpen = on;
     this.log(on ? '🧾 櫃檯開放:營業時會派一位店員坐櫃檯' : '🧾 櫃檯暫停,所有人手都下場', 'system');
@@ -585,6 +623,7 @@ export class Game {
       [`店員薪資(${this.state.shiftSize[0]}+${this.state.shiftSize[1]} 人次)`, money(-wages), 'neg'],
       ['員工工作', `補貨 ${s.restocks} · 維修 ${s.repairs} · 協助 ${s.assists} · 取獎品 ${s.retrievals} · 拖地 ${s.mops} · 清潔 ${s.cleans} · 補零錢 ${s.refills}`, ''],
       ['進出貨', `到貨 ${s.inbound} 隻(卸 ${s.unloads} 箱)· 退貨 ${s.returned} 隻 · 補上機台 ${s.shelved} 隻 · 客人帶走 ${s.wins} 隻`, ''],
+      ['零售(冰箱與展示架)', `賣出 ${s.retailSold} 件,毛利 ${money(s.retailRev)}(飲料剩 ${this.state.retail.drink}、零食周邊剩 ${this.state.retail.snack})`, s.retailRev > 0 ? 'pos' : ''],
       ['後場運作', `廁所使用 ${s.wcVisits} 次(打掃 ${s.wcCleans} 次)· 櫃檯兌幣 ${s.counterServed} 人次 · 員工休息 ${s.rests} 次`, ''],
       ['意外事件', `機台故障 ${s.faults} · 獎品卡洞 ${s.stuck} · 打翻飲料 ${s.spills}(滑倒 ${s.slips})· 兌幣機卡鈔 ${s.jams}`, s.slips ? 'neg' : ''],
       ['顧客滿意度', `${r.avgSat >= 0 ? '+' : ''}${Math.round(r.avgSat * 100)}`, r.avgSat >= 0 ? 'pos' : 'neg'],

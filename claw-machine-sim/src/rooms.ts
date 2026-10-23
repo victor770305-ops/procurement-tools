@@ -1,5 +1,6 @@
 import * as THREE from 'three';
-import { COUNTER, HALL, ROOMS, RoomId, TRUCK_DOCK, WC_LAYOUT } from './layout';
+import { RETAIL } from './economy';
+import { COUNTER, HALL, RETAIL_SPOTS, ROOMS, RoomId, TRUCK_DOCK, WC_LAYOUT } from './layout';
 import { glowTexture, neonTexture, roomFloorTexture } from './textures';
 
 export interface BackOfHouse {
@@ -8,6 +9,8 @@ export interface BackOfHouse {
   setStock(n: number): void;
   /** 廁所髒污程度 0~1 */
   setWcDirt(id: 'wcF' | 'wcM', dirt: number): void;
+  /** 冰箱與展示架上的商品數 */
+  setRetail(drink: number, snack: number): void;
 }
 
 const std = (c: number, rough = 0.7, metal = 0) => new THREE.MeshStandardMaterial({ color: c, roughness: rough, metalness: metal });
@@ -353,8 +356,61 @@ export function buildBackOfHouse(): BackOfHouse {
   box(0.05, 2.4, 0.05, metal, cx - 1.4, 1.2, cz + 0.2, g, false);
   box(0.05, 2.4, 0.05, metal, cx + 1.4, 1.2, cz + 0.2, g, false);
 
+  // ================= 零售:冰箱與產品展示架(前廳西牆) =================
+  const drinks: THREE.Mesh[] = [];
+  const snacks: THREE.Mesh[] = [];
+  {
+    const fx = RETAIL_SPOTS.drink.x;
+    const fz = RETAIL_SPOTS.drink.z;
+    const fr = new THREE.Group();
+    fr.position.set(fx, 0, fz);
+    fr.rotation.y = Math.PI / 2;
+    g.add(fr);
+    box(1.5, 2.0, 0.75, std(0xe9eef5, 0.3, 0.5), 0, 1.0, 0, fr);
+    box(1.52, 0.12, 0.78, std(0x2b72c9, 0.4, 0.3), 0, 2.06, 0, fr);
+    const doorGlass = new THREE.Mesh(new THREE.PlaneGeometry(1.36, 1.62), new THREE.MeshPhysicalMaterial({ color: 0xbfe0ff, transparent: true, opacity: 0.2, roughness: 0.05, depthWrite: false }));
+    doorGlass.position.set(0, 1.08, 0.385);
+    fr.add(doorGlass);
+    const inner = new THREE.Mesh(new THREE.PlaneGeometry(1.34, 1.6), glow(0.55, 0.8, 1.0));
+    inner.position.set(0, 1.08, 0.37);
+    fr.add(inner);
+    const bc = [0xe2503a, 0x3aa0e2, 0x4fc46a, 0xf2c21b, 0xb06ae0, 0xf08a2c];
+    for (let r = 0; r < 4; r++) for (let i = 0; i < 6; i++) {
+      const b = add(new THREE.CylinderGeometry(0.055, 0.055, 0.22, 10), std(bc[(i + r) % 6], 0.35), -0.55 + i * 0.22, 0.42 + r * 0.38, 0.28, fr, false);
+      drinks.push(b);
+      box(1.3, 0.02, 0.5, chrome, 0, 0.3 + r * 0.38, 0.12, fr, false);
+    }
+    box(1.3, 0.3, 0.04, std(0x2b72c9, 0.4), 0, 1.92, 0.385, fr, false);
+    sign('COLD', '冷飲', '#9fe0ff', 1.6, fx + 0.6, 2.6, fz + 0.1, 0).rotation.y = Math.PI / 2;
+  }
+  {
+    const rx = RETAIL_SPOTS.snack.x;
+    const rz = RETAIL_SPOTS.snack.z;
+    const rk = new THREE.Group();
+    rk.position.set(rx, 0, rz);
+    rk.rotation.y = Math.PI / 2;
+    g.add(rk);
+    box(1.5, 1.7, 0.5, std(0xf1f0ec, 0.5), 0, 0.85, -0.05, rk);
+    for (const y of [0.15, 0.62, 1.09, 1.56]) box(1.5, 0.04, 0.55, std(0xe2503a, 0.5), 0, y, 0.0, rk, false);
+    const pc = [0xf29bb8, 0x8fd0ff, 0xffd86b, 0xb4e08a, 0xd6a4ff, 0xff9a5c];
+    for (let r = 0; r < 3; r++) for (let i = 0; i < 6; i++) {
+      const k = r === 1 ? 'b' : 'p';
+      const m = k === 'b'
+        ? add(new THREE.BoxGeometry(0.17, 0.26, 0.1), std(pc[(i + r) % 6], 0.55), -0.58 + i * 0.23, 0.36 + r * 0.47, 0.17, rk, false)
+        : add(new THREE.SphereGeometry(0.1, 10, 8), std(pc[(i + r) % 6], 0.95), -0.58 + i * 0.23, 0.38 + r * 0.47, 0.17, rk, false);
+      snacks.push(m);
+    }
+    sign('SHOP', '零食周邊', '#ffb36b', 1.6, rx + 0.6, 2.2, rz + 0.1, 0).rotation.y = Math.PI / 2;
+  }
+
   return {
     group: g,
+    setRetail(drink: number, snack: number) {
+      const sd = Math.ceil((drink / RETAIL.drink.cap) * drinks.length);
+      const ss = Math.ceil((snack / RETAIL.snack.cap) * snacks.length);
+      drinks.forEach((m, i) => (m.visible = i < sd));
+      snacks.forEach((m, i) => (m.visible = i < ss));
+    },
     setStock(n: number) {
       const show = Math.min(crates.length, Math.ceil(n / 10));
       crates.forEach((c, i) => (c.visible = i < show));

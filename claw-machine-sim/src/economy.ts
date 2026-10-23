@@ -22,6 +22,12 @@ export interface Pack {
   weights: Record<Rarity, number>;
 }
 
+export type RetailKind = 'drink' | 'snack';
+/** 零售商品:售價、進貨成本、展示容量、補貨箱的件數 */
+export const RETAIL: Record<RetailKind, { name: string; icon: string; price: number; cost: number; cap: number; box: number; boxPrice: number }> = {
+  drink: { name: '飲料', icon: '🥤', price: 30, cost: 12, cap: 24, box: 24, boxPrice: 288 },
+  snack: { name: '零食周邊', icon: '🍿', price: 45, cost: 20, cap: 20, box: 20, boxPrice: 400 },
+};
 /** 每個紙箱裝幾隻 */
 export const BOX_SIZE = 20;
 /** 急件加價與到貨時間(遊戲秒) */
@@ -89,6 +95,9 @@ export interface DayStats {
   rests: number;
   /** 櫃檯人工兌幣的次數 */
   counterServed: number;
+  /** 冰箱與展示架賣出的件數與營收 */
+  retailSold: number;
+  retailRev: number;
 }
 
 export const newStats = (): DayStats => ({
@@ -96,7 +105,7 @@ export const newStats = (): DayStats => ({
   restocks: 0, cleans: 0, assists: 0, repairs: 0, mops: 0, retrievals: 0, refills: 0,
   cogs: 0, purchases: 0, satSum: 0, satCount: 0, walkouts: 0, noStock: 0, angry: 0,
   spills: 0, slips: 0, faults: 0, stuck: 0, jams: 0,
-  inbound: 0, returned: 0, shelved: 0, unloads: 0, loads: 0, wcVisits: 0, wcCleans: 0, rests: 0, counterServed: 0,
+  inbound: 0, returned: 0, shelved: 0, unloads: 0, loads: 0, wcVisits: 0, wcCleans: 0, rests: 0, counterServed: 0, retailSold: 0, retailRev: 0,
 });
 
 /** 劇情選擇帶來的暫時店況加成(持續幾天) */
@@ -169,6 +178,9 @@ export interface GameState {
   shipSeq: number;
   /** 是否派一位店員坐櫃檯(開放人工兌幣與客服) */
   counterOpen: boolean;
+  /** 零售:展示中的庫存與倉庫備貨 */
+  retail: Record<RetailKind, number>;
+  retailBack: Record<RetailKind, number>;
 }
 
 export const initialState = (): GameState => ({
@@ -190,6 +202,8 @@ export const initialState = (): GameState => ({
   shipments: [],
   shipSeq: 1,
   counterOpen: true,
+  retail: { drink: 18, snack: 14 },
+  retailBack: { drink: 24, snack: 20 },
 });
 
 const KEY = 'claw-club-save-v3';
