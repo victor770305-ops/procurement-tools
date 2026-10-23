@@ -143,6 +143,8 @@ async function main() {
   $('btnShop').addEventListener('click', () => toggle('shop'));
   $('btnShopClose').addEventListener('click', () => hud.openShop(false));
   $('btnShelve').addEventListener('click', () => game.shelve());
+  $<HTMLInputElement>('counterOpen').checked = game.state.counterOpen;
+  $<HTMLInputElement>('counterOpen').addEventListener('change', (e) => game.setCounter((e.target as HTMLInputElement).checked));
   $<HTMLInputElement>('autoRestock').addEventListener('change', (e) => game.setAuto((e.target as HTMLInputElement).checked));
 
   const priceEl = $<HTMLInputElement>('price');

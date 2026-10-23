@@ -20,6 +20,9 @@ export class Exchange {
   service: 'fix' | 'refill' | null = null;
   readonly reserved = new Set<string>();
   uses = 0;
+  /** 櫃檯人工兌幣:不會卡鈔也不缺零錢,但要櫃檯店員在崗,而且比機器慢 */
+  readonly counter: boolean;
+  manned: () => boolean = () => true;
   private display = makeDisplay();
   private light: THREE.Mesh;
   private lightMat = new THREE.MeshBasicMaterial({ color: new THREE.Color(0.2, 2, 0.6), toneMapped: false });
@@ -27,8 +30,14 @@ export class Exchange {
   constructor(readonly index: number, scene: THREE.Object3D) {
     this.x = EXCHANGES[index].x;
     this.z = EXCHANGES[index].z;
+    this.counter = index >= 2;
     this.group.position.set(this.x, 0, this.z);
     scene.add(this.group);
+    if (this.counter) {
+      this.coins = 1e9;
+      this.light = new THREE.Mesh();
+      return;
+    }
 
     const paint = new THREE.MeshPhysicalMaterial({ color: 0x17606b, roughness: 0.35, metalness: 0.25, clearcoat: 1, clearcoatRoughness: 0.12 });
     const dark = new THREE.MeshStandardMaterial({ color: 0x0b0d14, roughness: 0.6, metalness: 0.3 });
@@ -68,7 +77,14 @@ export class Exchange {
     return exchangeService(this.index);
   }
   get usable() {
-    return this.state === 'ok' && !this.service;
+    return this.state === 'ok' && !this.service && (!this.counter || this.manned());
+  }
+  /** 一次兌幣要花的秒數 */
+  get serveTime() {
+    return this.counter ? 3.4 : 2.0;
+  }
+  get name() {
+    return this.counter ? '櫃檯' : `兌幣機${this.index + 1}`;
   }
 
   setState(s: ExState) {
@@ -77,6 +93,7 @@ export class Exchange {
   }
 
   refresh() {
+    if (this.counter) return;
     const label = this.state === 'ok' ? 'COINS' : this.state === 'jam' ? 'JAM' : 'EMPTY';
     this.display.draw(label, String(Math.max(0, Math.floor(this.coins))).padStart(3, '0'));
     if (this.state === 'ok') this.lightMat.color.setRGB(0.2, 2, 0.6);

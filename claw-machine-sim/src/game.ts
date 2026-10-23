@@ -3,7 +3,7 @@ import type { Sfx } from './audio';
 import { RARITY } from './config';
 import { Customer, CustomerManager, KINDS, LeaveReason } from './customers';
 import {
-  CAPACITY, DayStats, GameState, HOURS, OPEN_HOUR, OPEN_SECONDS, PACKS, Pack, RENT, SHIFT_NAMES, StockItem, WAGE_SHIFT,
+  CAPACITY, DayStats, GameState, HOURS, OPEN_HOUR, OPEN_SECONDS, PACKS, Pack, RENT, RETURN_RATE, RUSH_FEE, SHIFT_NAMES, StockItem, WAGE_SHIFT,
   clearSave, initialState, loadGame, newStats, rollRarity, saveGame, settle,
 } from './economy';
 import type { Store } from './environment';
@@ -11,6 +11,8 @@ import { EventDirector, Spill } from './events';
 import { Exchange } from './exchange';
 import type { Input } from './input';
 import { EXCHANGES, N_MACHINES, THEMES, gridOf, themeOf } from './layout';
+import { Lounge, Restroom } from './facilities';
+import { Logistics } from './logistics';
 import type { LiteLayer } from './lite';
 import { Machine, Prize, SERVICE_LABEL } from './machine';
 import { PLUSH_TYPES } from './plush';
@@ -68,6 +70,9 @@ export class Game {
   readonly spills: Spill[] = [];
   readonly manager: CustomerManager;
   readonly staff: StaffManager;
+  readonly logistics: Logistics;
+  readonly restrooms: Restroom[] = [new Restroom('wcF'), new Restroom('wcM')];
+  readonly lounge = new Lounge();
   readonly events: EventDirector;
   readonly boss: BossNpc;
   selected = 0;
@@ -108,6 +113,39 @@ export class Game {
       d.lite.setPile(i, m.stock, m.items);
     }
     for (let k = 0; k < EXCHANGES.length; k++) this.exchanges.push(new Exchange(k, d.scene));
+    this.exchanges[2].manned = () => this.staff.cashierReady;
+
+    this.logistics = new Logistics(
+      d.scene,
+      {
+        active: () => this.phase !== 'report',
+        addWarehouse: (items) => {
+          this.state.warehouse.push(...items);
+          this.refresh();
+        },
+        takeWarehouse: (n) => {
+          const items = this.state.warehouse.splice(0, n);
+          this.refresh();
+          return items;
+        },
+        warehouseCount: () => this.state.warehouse.length,
+        refund: (amount) => {
+          this.state.cash += amount;
+          this.refresh();
+        },
+        log: (t, k) => this.log(t, k),
+        onInbound: (n) => (this.stats.inbound += n),
+        onReturned: (n) => (this.stats.returned += n),
+        ding: () => d.sfx.coin(),
+      },
+      this.state.shipments,
+      this.state.shipSeq,
+    );
+    if (fresh) {
+      const gift = Array.from({ length: 40 }, () => randomItem(PACKS[1].weights));
+      const ship = this.logistics.orderIn('開幕賀禮 40 隻', gift, true);
+      ship.eta = 12;
+    }
 
     this.events = new EventDirector({
       isOpen: () => this.phase === 'open',
@@ -119,7 +157,7 @@ export class Game {
     });
     for (const m of this.machines) m.stuckChance = this.events.stuckChance;
 
-    this.manager = new CustomerManager(d.scene, this.machines, this.exchanges, {
+    this.manager = new CustomerManager(d.scene, this.machines, this.exchanges, this.restrooms, {
       price: () => this.state.price,
       isOpen: () => this.phase === 'open',
       totalStock: () => this.machines.reduce((s, m) => s + (m.fault ? 0 : m.stock), 0),
@@ -175,10 +213,21 @@ export class Game {
       },
       onExchangeEmpty: (ex) => this.log(`🪙 兌幣機${ex.index + 1}沒有零錢了`, 'alert'),
       onExchangeLow: () => {},
+      onCounterServed: () => {
+        this.stats.counterServed++;
+      },
+      onWcUse: () => {
+        this.stats.wcVisits++;
+      },
+      onWcGross: (_c, room) => {
+        this.stats.satSum -= 0.2;
+        this.stats.satCount++;
+        this.logGated(`gross:${room.id}`, 25, `🚽 ${room.name}太髒了,客人在抱怨`, 'alert');
+      },
       log: (t, k) => this.log(t, k),
     });
 
-    this.staff = new StaffManager(d.scene, this.machines, this.exchanges, () => this.spills, {
+    this.staff = new StaffManager(d.scene, this.machines, this.exchanges, () => this.spills, this.logistics, this.restrooms, this.lounge, {
       isOpen: () => this.phase === 'open' || this.phase === 'closing',
       warehouse: () => this.state.warehouse.length,
       take: (n) => {
@@ -194,8 +243,9 @@ export class Game {
         this.manager.helped(c, true, 0.18 + (0.3 * who.stat(3)) / 100);
       },
       prizeRetrieved: (m, c, prize) => this.prizeRetrieved(m, c, prize),
-      onRestock: () => {
+      onRestock: (_m, n) => {
         this.stats.restocks++;
+        this.stats.shelved += n;
         this.refresh();
       },
       onRefill: () => {
@@ -211,6 +261,23 @@ export class Game {
         this.stats.cleans++;
       },
       onFixEx: () => {},
+      putBack: (items) => {
+        this.state.warehouse.push(...items);
+        this.refresh();
+      },
+      counterOn: () => this.state.counterOpen,
+      onUnload: () => {
+        this.stats.unloads++;
+      },
+      onLoad: () => {
+        this.stats.loads++;
+      },
+      onWcClean: () => {
+        this.stats.wcCleans++;
+      },
+      onRest: () => {
+        this.stats.rests++;
+      },
       log: (t, k) => this.log(t, k),
     });
     this.staff.restore(this.state.staff);
@@ -312,10 +379,21 @@ export class Game {
         warehouse: this.state.warehouse.length,
         canShelve: this.state.warehouse.length > 0,
         auto: this.autoRestock,
+        ships: this.logistics.list.map((sh) => ({ dir: sh.dir, label: sh.label, state: this.shipState(sh), boxes: sh.boxes, left: sh.left })),
+        returnable: Math.max(0, this.state.warehouse.length - this.logistics.reservedOut),
       },
-      (p) => this.buyPack(p),
+      (p, rush) => this.buyPack(p, rush),
+      (n) => this.returnStock(n),
     );
     store.setShelfStock(this.state.warehouse.length);
+  }
+
+  private shipState(sh: import('./logistics').Shipment) {
+    if (sh.docked) return sh.dir === 'in' ? '卸貨中' : '裝車中';
+    if (this.logistics.current === sh) return '倒車入庫';
+    if (sh.eta < 0) return '明早到貨';
+    if (sh.eta === 0) return '排隊等卸貨區';
+    return `約 ${Math.ceil(sh.eta)} 秒後到`;
   }
 
   private syncUi() {
@@ -335,6 +413,8 @@ export class Game {
 
   save() {
     this.state.staff = this.staff.snapshot();
+    this.state.shipments = this.logistics.snapshot();
+    this.state.shipSeq = this.logistics.seq;
     saveGame(this.state, this.machines.map((m) => m.snapshotItems));
   }
 
@@ -396,18 +476,42 @@ export class Game {
     hud.say(`試玩 ${m.name}:移動爪子,對準後按「放爪」`, 2200);
   }
 
-  buyPack(p: Pack) {
-    if (this.state.cash < p.price) {
+  /** 下單進貨:款項先付,貨由供應商的貨車送到倉庫卸貨區,再由店員搬進倉庫 */
+  buyPack(p: Pack, rush = false) {
+    const price = rush ? Math.round(p.price * (1 + RUSH_FEE)) : p.price;
+    if (this.state.cash < price) {
       this.d.hud.say('現金不足', 1400);
       return;
     }
-    this.state.cash -= p.price;
-    this.stats.purchases += p.price;
-    for (let i = 0; i < p.count; i++) this.state.warehouse.push(randomItem(p.weights));
+    this.state.cash -= price;
+    this.stats.purchases += price;
+    const items = Array.from({ length: p.count }, () => randomItem(p.weights));
+    this.logistics.orderIn(`${p.name} ${p.count} 隻`, items, rush);
     this.d.sfx.coin();
-    this.d.hud.say(`已進貨 ${p.count} 隻,存放在倉庫`, 1800);
-    this.log(`📦 進貨 ${p.name}(${money(p.price)})`, 'system');
+    this.d.hud.say(rush ? '已下急件訂單,貨車很快就到' : '已下訂單,明天早上到貨', 2000);
+    this.log(`🧾 老闆在辦公室下單:${p.name}(${money(price)})${rush ? ',急件' : ',隔日到貨'}`, 'system');
     this.refresh();
+    this.save();
+  }
+
+  /** 退貨:把倉庫裡多餘的庫存退給供應商,退回成本的一部分 */
+  returnStock(n: number) {
+    const free = this.state.warehouse.length - this.logistics.reservedOut;
+    const k = Math.min(n, free);
+    if (k <= 0) {
+      this.d.hud.say('倉庫沒有可退的庫存', 1600);
+      return;
+    }
+    this.logistics.orderReturn(k);
+    this.d.hud.say(`已通知供應商回收 ${k} 隻,稍後派車`, 2000);
+    this.log(`↩️ 申請退貨 ${k} 隻(退款約為成本的 ${Math.round(RETURN_RATE * 100)}%)`, 'system');
+    this.refresh();
+    this.save();
+  }
+
+  setCounter(on: boolean) {
+    this.state.counterOpen = on;
+    this.log(on ? '🧾 櫃檯開放:營業時會派一位店員坐櫃檯' : '🧾 櫃檯暫停,所有人手都下場', 'system');
     this.save();
   }
 
@@ -428,7 +532,10 @@ export class Game {
     }
     this.phase = 'open';
     this.dayTime = 0;
+    // 準備階段已經發生的進貨、卸貨、打掃等,算進今天的帳
+    const prep = this.stats;
     this.stats = newStats();
+    for (const k of ['purchases', 'inbound', 'returned', 'shelved', 'unloads', 'loads', 'wcCleans', 'rests'] as const) this.stats[k] = prep[k];
     this.middayDone = false;
     this.eveningDone = false;
     this.shift = 0;
@@ -477,6 +584,8 @@ export class Game {
       ['房租與水電', money(-(RENT + extraRent)), 'neg'],
       [`店員薪資(${this.state.shiftSize[0]}+${this.state.shiftSize[1]} 人次)`, money(-wages), 'neg'],
       ['員工工作', `補貨 ${s.restocks} · 維修 ${s.repairs} · 協助 ${s.assists} · 取獎品 ${s.retrievals} · 拖地 ${s.mops} · 清潔 ${s.cleans} · 補零錢 ${s.refills}`, ''],
+      ['進出貨', `到貨 ${s.inbound} 隻(卸 ${s.unloads} 箱)· 退貨 ${s.returned} 隻 · 補上機台 ${s.shelved} 隻 · 客人帶走 ${s.wins} 隻`, ''],
+      ['後場運作', `廁所使用 ${s.wcVisits} 次(打掃 ${s.wcCleans} 次)· 櫃檯兌幣 ${s.counterServed} 人次 · 員工休息 ${s.rests} 次`, ''],
       ['意外事件', `機台故障 ${s.faults} · 獎品卡洞 ${s.stuck} · 打翻飲料 ${s.spills}(滑倒 ${s.slips})· 兌幣機卡鈔 ${s.jams}`, s.slips ? 'neg' : ''],
       ['顧客滿意度', `${r.avgSat >= 0 ? '+' : ''}${Math.round(r.avgSat * 100)}`, r.avgSat >= 0 ? 'pos' : 'neg'],
       ['聲望變化', `${r.repDelta >= 0 ? '+' : ''}${r.repDelta.toFixed(2)}(現在 ${this.state.rep.toFixed(1)})`, r.repDelta >= 0 ? 'pos' : 'neg'],
@@ -501,6 +610,7 @@ export class Game {
 
   private nextDay() {
     this.state.day++;
+    this.logistics.dayStart();
     this.state.mods = this.state.mods.map((m) => ({ ...m, days: m.days - 1 })).filter((m) => m.days > 0);
     this.applyMods();
     this.middayDone = false;
@@ -678,6 +788,7 @@ export class Game {
       }
     }
     this.manager.update(DT, this.state.rep);
+    this.logistics.update(DT);
     this.staff.update(DT);
     this.boss.update(DT, this.phase === 'open' || this.phase === 'closing');
     this.events.update(DT);
@@ -721,6 +832,7 @@ export class Game {
     if (this.detailT <= 0) {
       this.detailT = 0.4;
       this.manageDetail();
+      for (const r of this.restrooms) this.d.store.setWcDirt(r.id, r.dirt);
     }
     this.updateLite();
     this.updateLod();
@@ -1091,6 +1203,7 @@ export class Game {
     for (const c of this.manager.all) apply(c.human);
     for (const s of this.staff.staff) if (s.active) apply(s.human);
     apply(this.boss.human);
+    if (this.logistics.driver.group.visible) apply(this.logistics.driver);
   }
 
   private opsSnapshot() {
@@ -1125,10 +1238,16 @@ export class Game {
         pri: r.pri,
         machine: r.machine?.index,
       })),
-      staff: this.staff.onDuty.map((s) => ({ name: s.name, title: s.ch.title, action: s.action, done: s.done })),
+      staff: this.staff.onDuty.map((s) => ({ name: s.name, title: s.ch.title, action: s.action, done: s.done, fatigue: s.fatigue, cashier: s.role === 'cashier' })),
       shift: `${this.shiftName} ${this.staff.onDuty.length} 人`,
-      exchanges: this.exchanges.map((e) => ({ name: `兌幣機${e.index + 1}`, state: e.state, coins: Math.floor(e.coins), queue: e.queue.length })),
+      exchanges: this.exchanges.map((e) => ({ name: e.name, state: e.counter && !e.usable ? 'closed' : e.state, coins: e.counter ? -1 : Math.floor(e.coins), queue: e.queue.length })),
       warehouse: this.state.warehouse.length,
+      ships: this.logistics.list.map((sh) => ({ dir: sh.dir, label: sh.label, state: this.shipState(sh), boxes: sh.boxes, left: sh.left })),
+      facilities: {
+        wc: this.restrooms.map((r) => ({ name: r.name, dirt: r.dirt, busy: r.busy, cap: r.slots.length })),
+        lounge: { n: this.lounge.occupied, cap: this.lounge.spots.length },
+        counter: { on: this.state.counterOpen, ready: this.staff.cashierReady, who: this.staff.cashier?.name ?? '' },
+      },
       mods: this.state.mods.map((m) => ({ label: m.label, days: m.days })),
       feed: this.feed.slice(-10).reverse(),
     };
@@ -1146,7 +1265,15 @@ export class Game {
       if (icon) out.push({ id: `m${m.index}`, x: m.x, y: 2.55, z: m.z + 0.2, icon, urgent, machine: m.index });
     }
     for (const sp of this.spills) if (!sp.cleaned) out.push({ id: `s${sp.pos.x.toFixed(1)}${sp.pos.z.toFixed(1)}`, x: sp.pos.x, y: 0.5, z: sp.pos.z, icon: '💦', urgent: true });
+    if (this.logistics.docked) {
+      const p = this.logistics.dockPos;
+      out.push({ id: 'truck', x: p.x, y: p.y, z: p.z, icon: '🚚', urgent: !!this.logistics.jobs().length });
+    }
+    for (const r of this.restrooms) {
+      if (r.dirt >= 0.55) out.push({ id: `wc${r.id}`, x: r.cleanSpot.x, y: 2.2, z: r.cleanSpot.z, icon: '🚽', urgent: r.dirt >= 0.85 });
+    }
     for (const e of this.exchanges) {
+      if (e.counter) continue;
       if (e.state === 'jam') out.push({ id: `e${e.index}`, x: e.x, y: 2.7, z: e.z, icon: '💴', urgent: true });
       else if (e.state === 'empty' || e.coins <= 70) out.push({ id: `e${e.index}`, x: e.x, y: 2.7, z: e.z, icon: '🪙', urgent: e.state === 'empty' });
     }

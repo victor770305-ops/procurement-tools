@@ -1,7 +1,7 @@
 import * as THREE from 'three';
 import { BOSS, Character } from './characters';
 import { Human, humanOptsFromCharacter } from './human';
-import { IDLE_SPOTS, route } from './layout';
+import { IDLE_SPOTS, officeDesk, route } from './layout';
 
 const rnd = (a: number, b: number) => a + Math.random() * (b - a);
 
@@ -60,11 +60,12 @@ export class BossNpc {
         pose = 'wave';
       }
       if (this.dwell <= 0) {
-        const target = open ? IDLE_SPOTS[Math.floor(Math.random() * IDLE_SPOTS.length)] : this.home;
+        const toOffice = Math.random() < (open ? 0.28 : 0.6);
+        const target = toOffice ? officeDesk() : open ? IDLE_SPOTS[Math.floor(Math.random() * IDLE_SPOTS.length)] : this.home;
         this.path = route(p, target);
-        this.dwell = open ? rnd(7, 14) : rnd(8, 16);
-        this.action = open ? '巡店中' : '在前廳整理帳本';
-        if (open && Math.random() < 0.5) {
+        this.dwell = toOffice ? rnd(14, 26) : open ? rnd(7, 14) : rnd(8, 16);
+        this.action = toOffice ? '在辦公室對帳、下訂單' : open ? '巡店中' : '在前廳整理帳本';
+        if (open && !toOffice && Math.random() < 0.5) {
           this.wave = 1.6;
           this.say(['大家辛苦了!', '今天人好多啊', '有問題隨時叫我'][Math.floor(Math.random() * 3)]);
         }

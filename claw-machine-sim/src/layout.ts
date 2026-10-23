@@ -56,18 +56,94 @@ export const DOOR_OUT = new THREE.Vector3(0, 0, 24.5);
 export const DOOR_IN = new THREE.Vector3(0, 0, 20.8);
 export const HALL = { minX: -9.6, maxX: 9.6, minZ: -12.6, maxZ: 21.6 };
 
+/** 兩台兌幣機,加上櫃檯人工兌幣(第 3 個,需要櫃檯店員在崗才能使用) */
 export const EXCHANGES = [
   { x: -2.6, z: 14.3 },
   { x: 2.6, z: 14.3 },
+  { x: 6.7, z: 15.3 },
 ];
+export const COUNTER = { x: 6.7, z: 15.3, w: 3.2, d: 0.8 };
+/** 櫃檯店員站位(櫃檯後方) */
+export const cashierSpot = () => new THREE.Vector3(COUNTER.x, 0, COUNTER.z - 1.15);
 /** 使用者站位:第 0 格貼著兌幣機,後面往入口方向排隊 */
 export const exchangeSlot = (k: number, i: number) => new THREE.Vector3(EXCHANGES[k].x, 0, EXCHANGES[k].z + 1.45 + 0.85 * i);
 /** 店員補幣/排除故障的站位(兌幣機側邊) */
 export const exchangeService = (k: number) => new THREE.Vector3(EXCHANGES[k].x + 1.3, 0, EXCHANGES[k].z + 1.1);
 
-export const SHELF = { x: -8.7, z: 16.2 };
-export const shelfSpot = () => new THREE.Vector3(-7.3, 0, 16.2);
-export const STAFF_DOOR = new THREE.Vector3(8.2, 0, 16.8);
+// ---------- 後場房間(大廳左右兩側的加蓋區) ----------
+export type RoomId = 'warehouse' | 'office' | 'lounge' | 'wcF' | 'wcM';
+export interface Room {
+  id: RoomId;
+  name: string;
+  side: 'E' | 'W';
+  /** 室內範圍(x 由大廳牆往外) */
+  x0: number;
+  x1: number;
+  z0: number;
+  z1: number;
+  doorZ: number;
+  /** 門內側與門外側(大廳側通道)的路徑點 */
+  inside: THREE.Vector3;
+  outside: THREE.Vector3;
+}
+const mkRoom = (id: RoomId, name: string, side: 'E' | 'W', depthX: number, z0: number, z1: number, doorZ: number): Room => {
+  const wall = side === 'E' ? HALL.maxX : HALL.minX;
+  const sg = side === 'E' ? 1 : -1;
+  return {
+    id, name, side,
+    x0: Math.min(wall, wall + sg * depthX),
+    x1: Math.max(wall, wall + sg * depthX),
+    z0, z1, doorZ,
+    inside: new THREE.Vector3(wall + sg * 0.95, 0, doorZ),
+    outside: new THREE.Vector3(wall - sg * 1.3, 0, doorZ),
+  };
+};
+export const ROOMS: Record<RoomId, Room> = {
+  warehouse: mkRoom('warehouse', '倉庫', 'W', 9, 2.6, 12.2, 8.0),
+  wcF: mkRoom('wcF', '女廁', 'W', 8, 12.2, 16.9, 14.5),
+  wcM: mkRoom('wcM', '男廁', 'W', 8, 16.9, 21.6, 19.2),
+  office: mkRoom('office', '辦公室', 'E', 8, 2.6, 12.2, 7.0),
+  lounge: mkRoom('lounge', '員工休息室', 'E', 8, 12.2, 21.6, 17.2),
+};
+export const ROOM_LIST = Object.values(ROOMS);
+/** 鏡頭與平移的範圍(含兩側房間與倉庫外的卸貨區) */
+export const WORLD = { minX: -34, maxX: 18, minZ: -13, maxZ: 22 };
+/** 倉庫內:貨架取貨/上架站位、卸貨口站位(貨車停在倉庫西牆外) */
+export const shelfSpot = () => new THREE.Vector3(-13.4, 0, 5.5);
+export const dockSpot = () => new THREE.Vector3(-17.7, 0, ROOMS.warehouse.doorZ);
+export const TRUCK_DOCK = { x: -22.3, z: ROOMS.warehouse.doorZ, rearX: -19.1 };
+/** 廁所:每個隔間/小便斗是一個使用位,sinks 是洗手台站位 */
+export interface WcSlot {
+  front: THREE.Vector3;
+  pos: THREE.Vector3;
+}
+export const WC_LAYOUT: Record<'wcF' | 'wcM', { slots: WcSlot[]; sinks: THREE.Vector3[]; clean: THREE.Vector3 }> = {
+  wcF: {
+    slots: [
+      { front: new THREE.Vector3(-16.8, 0, 14.9), pos: new THREE.Vector3(-16.8, 0, 13.2) },
+      { front: new THREE.Vector3(-15.6, 0, 14.9), pos: new THREE.Vector3(-15.6, 0, 13.2) },
+    ],
+    sinks: [new THREE.Vector3(-12.6, 0, 15.8), new THREE.Vector3(-11.4, 0, 15.8)],
+    clean: new THREE.Vector3(-13.6, 0, 14.6),
+  },
+  wcM: {
+    slots: [
+      { front: new THREE.Vector3(-16.8, 0, 19.6), pos: new THREE.Vector3(-16.8, 0, 18.1) },
+      { front: new THREE.Vector3(-15.4, 0, 18.9), pos: new THREE.Vector3(-15.4, 0, 17.9) },
+      { front: new THREE.Vector3(-14.3, 0, 18.9), pos: new THREE.Vector3(-14.3, 0, 17.9) },
+    ],
+    sinks: [new THREE.Vector3(-12.6, 0, 20.5), new THREE.Vector3(-11.4, 0, 20.5)],
+    clean: new THREE.Vector3(-13.6, 0, 19.3),
+  },
+};
+/** 員工休息室入口(店員上下班經過) */
+export const STAFF_DOOR = ROOMS.lounge.outside.clone();
+export const lockerSpot = () => new THREE.Vector3(12.4, 0, 14.0);
+/** 休息室裡可以坐/站的休息位置 */
+export const REST_SPOTS = [new THREE.Vector3(16.0, 0, 18.3), new THREE.Vector3(16.0, 0, 20.1), new THREE.Vector3(15.6, 0, 14.9), new THREE.Vector3(14.0, 0, 19.6)];
+/** 辦公室:辦公桌後的位置、保險箱旁 */
+export const officeDesk = () => new THREE.Vector3(15.3, 0, 6.2);
+export const officeSafe = () => new THREE.Vector3(15.6, 0, 3.9);
 
 /** 玩家站位:機台正前方;後面的人往走道方向排隊 */
 export const machineStation = (g: Grid, i: number) => (i === 0 ? new THREE.Vector3(g.x, 0, g.z + 0.98) : new THREE.Vector3(g.x + 0.45, 0, g.z + 0.98 + 0.72 * i));
@@ -83,7 +159,7 @@ export const IDLE_SPOTS = [
   new THREE.Vector3(4, 0, rowZ(2) + 2.3),
   new THREE.Vector3(0, 0, rowZ(5) + 2.3),
   new THREE.Vector3(-4.5, 0, 16),
-  new THREE.Vector3(4.5, 0, 16),
+  new THREE.Vector3(3.2, 0, 19),
 ];
 
 /** 走道區域編號:0~5 為各排前方走道,6 為前廳,-1 為左右側通道,-2 為機台帶(不可行走) */
@@ -94,8 +170,31 @@ export function stripOf(p: THREE.Vector3): number {
   return -2;
 }
 
-/** 從 from 走到 to 的折線路徑(只走走道與側通道,不穿過機台) */
-export function route(from: THREE.Vector3, to: THREE.Vector3): THREE.Vector3[] {
+const COUNTER_GAP_OUT = new THREE.Vector3(4.4, 0, 16.2);
+const COUNTER_GAP_IN = new THREE.Vector3(4.4, 0, 14.2);
+const inCounterBack = (p: THREE.Vector3) => p.x > 4.95 && p.x < 8.6 && p.z > 13.0 && p.z < COUNTER.z - 0.4;
+
+/** 點在哪個區域:大廳或某個後場房間(卸貨區算倉庫) */
+export function zoneOf(p: THREE.Vector3): RoomId | 'hall' {
+  if (p.x > HALL.maxX + 0.12) {
+    for (const r of [ROOMS.office, ROOMS.lounge]) if (p.z >= r.z0 && p.z < r.z1) return r.id;
+  } else if (p.x < HALL.minX - 0.12) {
+    for (const r of [ROOMS.warehouse, ROOMS.wcF, ROOMS.wcM]) if (p.z >= r.z0 && p.z < r.z1) return r.id;
+  }
+  return 'hall';
+}
+
+/** 大廳內:只走走道與側通道,不穿過機台與櫃檯 */
+function hallRoute(from: THREE.Vector3, to: THREE.Vector3): THREE.Vector3[] {
+  const fb = inCounterBack(from);
+  const tb = inCounterBack(to);
+  if (fb && tb) return [to.clone()];
+  if (tb) return [...stripRoute(from, COUNTER_GAP_OUT), COUNTER_GAP_IN.clone(), to.clone()];
+  if (fb) return [COUNTER_GAP_IN.clone(), ...stripRoute(COUNTER_GAP_OUT, to)];
+  return stripRoute(from, to);
+}
+
+function stripRoute(from: THREE.Vector3, to: THREE.Vector3): THREE.Vector3[] {
   const sf = stripOf(from);
   const st = stripOf(to);
   if (sf === st && sf >= 0) return [to.clone()];
@@ -106,5 +205,26 @@ export function route(from: THREE.Vector3, to: THREE.Vector3): THREE.Vector3[] {
   if (sf !== -1) pts.push(new THREE.Vector3(cx, 0, from.z));
   if (st !== -1) pts.push(new THREE.Vector3(cx, 0, st === ROWS ? LANE_Z : to.z));
   pts.push(to.clone());
+  return pts;
+}
+
+/** 從 from 走到 to 的折線路徑:大廳只走走道;進出後場房間一律經過房門 */
+export function route(from: THREE.Vector3, to: THREE.Vector3): THREE.Vector3[] {
+  const zf = zoneOf(from);
+  const zt = zoneOf(to);
+  if (zf === 'hall' && zt === 'hall') return hallRoute(from, to);
+  if (zf === zt) return [to.clone()];
+  const pts: THREE.Vector3[] = [];
+  let cur = from;
+  if (zf !== 'hall') {
+    const r = ROOMS[zf];
+    pts.push(r.inside.clone(), r.outside.clone());
+    cur = r.outside;
+  }
+  if (zt === 'hall') pts.push(...hallRoute(cur, to));
+  else {
+    const r = ROOMS[zt];
+    pts.push(...hallRoute(cur, r.outside), r.inside.clone(), to.clone());
+  }
   return pts;
 }

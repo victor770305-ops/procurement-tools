@@ -137,6 +137,16 @@
     .row2 b.pos { color: #5fe3a1; } .row2 b.neg { color: #ff6b6b; }
     .row2.total { font-size: 17px; font-weight: 800; border-top: 1px solid var(--line); margin-top: 4px; }
     .pack { display: flex; justify-content: space-between; align-items: center; gap: 10px; padding: 12px 14px; margin-bottom: 8px; border-radius: 14px; background: rgba(255,255,255,0.05); border: 1px solid var(--line); }
+    .pack .btns { display: flex; gap: 6px; }
+    .pack .btns button small { display: block; font-size: 11px; font-weight: 600; opacity: 0.85; }
+    .hint2 { font-size: 12px; color: var(--muted); margin: 0 0 10px; line-height: 1.5; }
+    .sec2 { font-size: 12px; color: var(--muted); margin: 12px 0 6px; }
+    .btnrow { display: flex; gap: 8px; margin-bottom: 4px; }
+    .retbtn { border: 1px solid var(--line); background: rgba(255,255,255,0.08); color: #fff; border-radius: 10px; padding: 8px 12px; font-family: inherit; font-weight: 700; font-size: 13px; cursor: pointer; }
+    .retbtn:disabled { opacity: 0.4; }
+    .fat { display: inline-block; width: 34px; height: 5px; margin-left: 8px; border-radius: 3px; background: rgba(255,255,255,0.14); vertical-align: middle; overflow: hidden; }
+    .fat u { display: block; height: 100%; background: #6ad6a0; }
+    .fat.hi u { background: #ff9a5c; }
     .pack b { display: block; font-size: 15px; } .pack span { font-size: 12px; color: var(--muted); }
     .pack button, .sheet .act { border: 0; border-radius: 12px; padding: 10px 14px; font-weight: 800; font-family: inherit; font-size: 14px; cursor: pointer; color: #fff; background: linear-gradient(135deg, #ff3d9a, #ff7a3d); white-space: nowrap; }
     .sheet .act.alt { background: linear-gradient(135deg, #41e8ff, #7a6bff); color: #06101f; }
@@ -311,8 +321,12 @@
       <div id="opsProblems"></div>
       <div class="sec">在班店員</div>
       <div id="opsStaff"></div>
-      <div class="sec">兌幣機</div>
+      <div class="sec">兌幣機與櫃檯</div>
       <div id="opsEx"></div>
+      <div class="sec">進出貨(貨車、倉庫)</div>
+      <div id="opsShips"></div>
+      <div class="sec">後場設施</div>
+      <div id="opsFac"></div>
       <div class="sec">店內動態</div>
       <div id="opsFeed"></div>
     </div>
@@ -330,7 +344,8 @@
         <span>早班 10:00–16:00</span><div class="panel seg"><button data-shift="0" data-n="3">3 人</button><button data-shift="0" data-n="4">4 人</button></div>
         <span>晚班 16:00–22:00</span><div class="panel seg"><button data-shift="1" data-n="3">3 人</button><button data-shift="1" data-n="4">4 人</button></div>
       </div>
-      <div class="hintline">每人每班薪水 NT$400。人手不夠時,補貨、維修與清理會變慢。</div>
+      <div class="hintline">每人每班薪水 NT$400。人手不夠時,補貨、維修與清理會變慢。店員累了會自己去休息室。</div>
+      <label class="toggle"><span>派一位店員坐櫃檯(人工兌幣,分擔兌幣機排隊)</span><input type="checkbox" id="counterOpen" checked /></label>
       <div class="sub">庫存</div>
       <div class="row"><span>機台內(全部)</span><b id="mStock">0</b></div>
       <div class="row"><span>倉庫</span><b id="wStock">0</b></div>
@@ -379,9 +394,14 @@
 
     <div id="shop" class="modal" hidden>
       <div class="sheet">
-        <h2>進貨與補貨</h2>
+        <h2>進貨、退貨與補貨</h2>
         <div class="sub2" id="shopInfo"></div>
+        <div class="hint2">在辦公室下單:隔日到貨是明早來,急件加價 20%、約半小時內到。貨車停在倉庫西側的卸貨區,要靠店員一箱一箱搬進倉庫。</div>
         <div id="packList"></div>
+        <div class="sec2">退貨(退回約 60% 成本,貨車來時店員會從倉庫搬上車)</div>
+        <div id="returnList" class="btnrow"></div>
+        <div class="sec2">運送中</div>
+        <div id="shipList"></div>
         <label class="toggle"><span>自動補貨(貨少時店員主動補)</span><input type="checkbox" id="autoRestock" checked /></label>
         <div class="foot"><button class="act alt" id="btnShelve">請店員補貨</button><button class="act" id="btnShopClose" style="background:rgba(255,255,255,0.12)">關閉</button></div>
       </div>

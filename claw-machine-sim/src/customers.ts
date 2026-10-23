@@ -6,6 +6,7 @@ import { Human, HumanOpts, Pose, humanOptsFromCharacter } from './human';
 import { DOOR_IN, DOOR_OUT, MAX_LINE, route } from './layout';
 import type { Machine, Prize } from './machine';
 import type { Spill } from './events';
+import { Restroom } from './facilities';
 
 export type Kind = ArchKind;
 
@@ -36,7 +37,7 @@ const rnd = (a: number, b: number) => a + Math.random() * (b - a);
 const pick = <T,>(a: T[]) => a[Math.floor(Math.random() * a.length)];
 
 export type LeaveReason = 'done' | 'angry' | 'impatient' | 'closed' | 'nostock';
-export type CustState = 'exchange' | 'buying' | 'machine' | 'playing' | 'leaving';
+export type CustState = 'exchange' | 'buying' | 'machine' | 'playing' | 'wc' | 'leaving';
 export type HelpKind = 'assist' | 'retrieve' | 'exchange';
 
 export class Customer {
@@ -58,6 +59,14 @@ export class Customer {
   helpWait = 0;
   askedHelp = false;
   wins = 0;
+  /** 玩了幾局(玩到第 2 局後,可能想上廁所) */
+  rounds = 0;
+  wantWc = false;
+  wcDone = false;
+  wcRoom: Restroom | null = null;
+  wcSteps: { pos: THREE.Vector3; dwell: number }[] = [];
+  wcStep = 0;
+  wcT = -1;
   readonly dest = new THREE.Vector3(1e9, 0, 1e9);
   path: THREE.Vector3[] = [];
   readonly slippedOn = new Set<Spill>();
@@ -84,6 +93,7 @@ export class Customer {
     this.rare = st[4] / 100;
     this.human = new Human(humanOptsFromCharacter(this.ch, this.cfg.scale * rnd(0.97, 1.03), this.cfg.kid));
     this.human.group.position.copy(DOOR_OUT);
+    this.wantWc = Math.random() < (this.cfg.kid ? 0.3 : 0.22);
   }
 
   rollPlays(price: number) {
@@ -123,6 +133,9 @@ export interface ManagerHooks {
   onExchangeJam(ex: Exchange, c: Customer): void;
   onExchangeEmpty(ex: Exchange): void;
   onExchangeLow(ex: Exchange): void;
+  onCounterServed(): void;
+  onWcUse(room: Restroom): void;
+  onWcGross(c: Customer, room: Restroom): void;
   log(text: string, kind: 'customer' | 'sale' | 'win' | 'alert'): void;
 }
 
@@ -141,7 +154,7 @@ export class CustomerManager {
   private rounds = new Map<Machine, RoundInfo>();
   private readonly zero = { x: 0, z: 0 };
 
-  constructor(private scene: THREE.Object3D, private machines: Machine[], private exchanges: Exchange[], private hooks: ManagerHooks) {
+  constructor(private scene: THREE.Object3D, private machines: Machine[], private exchanges: Exchange[], private restrooms: Restroom[], private hooks: ManagerHooks) {
     for (const m of machines) this.rounds.set(m, { grabbed: false, slipped: false, won: [], stuck: false });
   }
 
@@ -209,7 +222,8 @@ export class CustomerManager {
     let bs = Infinity;
     for (const e of this.exchanges) {
       if (e === from) continue;
-      const s = e.queue.length + (e.usable ? 0 : 6) + Math.random() * 0.5;
+      if (e.counter && !e.usable) continue;
+      const s = (e.queue.length + 1) * (e.counter ? 1.8 : 1) + (e.usable ? 0 : 6) + Math.random() * 0.5;
       if (s < bs) {
         bs = s;
         best = e;
@@ -232,7 +246,7 @@ export class CustomerManager {
         head.say('沒娃娃了…', 2.5);
         return this.leave(head, 'nostock');
       }
-      if (Math.random() < this.hooks.jamChance()) {
+      if (!ex.counter && Math.random() < this.hooks.jamChance()) {
         ex.setState('jam');
         head.say('卡鈔了!?', 3);
         this.hooks.onExchangeJam(ex, head);
@@ -240,7 +254,7 @@ export class CustomerManager {
       }
       ex.using = head;
       head.state = 'buying';
-      ex.useT = 2.0;
+      ex.useT = ex.serveTime;
       ex.uses++;
     }
     if (ex.using) {
@@ -264,7 +278,8 @@ export class CustomerManager {
     ex.coins -= coins;
     ex.refresh();
     this.hooks.coinsSold(c, coins, coins * price);
-    if (ex.coins <= 70) this.hooks.onExchangeLow(ex);
+    if (ex.counter) this.hooks.onCounterServed();
+    else if (ex.coins <= 70) this.hooks.onExchangeLow(ex);
     c.coins = coins;
     ex.queue.splice(ex.queue.indexOf(c), 1);
     c.ex = null;
@@ -354,6 +369,7 @@ export class CustomerManager {
       return this.leave(c, 'nostock');
     }
     c.coins--;
+    c.rounds++;
     this.hooks.onPlay(m, c);
     c.state = 'playing';
     const r = this.rounds.get(m)!;
@@ -403,6 +419,7 @@ export class CustomerManager {
     }
     if (c.coins <= 0) return this.finishPlaying(m, c);
     if (!this.hooks.isOpen()) return this.leave(c, 'closed');
+    if (c.wantWc && !c.wcDone && c.rounds >= 2 && this.startWc(c)) return;
     c.state = 'machine';
     c.cool = 1.4;
     if (lost && c.mood < 0.15 && !c.askedHelp && Math.random() < 0.4) {
@@ -456,6 +473,75 @@ export class CustomerManager {
     this.afterRound(m, c, false);
   }
 
+  // ---------- 上廁所 ----------
+  private startWc(c: Customer): boolean {
+    const room = this.restrooms.find((r) => r.id === (c.ch.gender === 'f' ? 'wcF' : 'wcM'));
+    if (!room) return false;
+    const slot = room.claim(c);
+    if (!slot) return false;
+    if (c.machine) {
+      const i = c.machine.line.indexOf(c);
+      if (i >= 0) c.machine.line.splice(i, 1);
+    }
+    if (c.needsHelp) {
+      this.hooks.cancelHelp(c);
+      c.needsHelp = null;
+    }
+    c.machine = null;
+    c.state = 'wc';
+    c.wcRoom = room;
+    c.wcStep = 0;
+    c.wcT = -1;
+    const sink = room.sinks[Math.floor(Math.random() * room.sinks.length)];
+    c.wcSteps = [
+      { pos: slot.front.clone(), dwell: 0 },
+      { pos: slot.pos.clone(), dwell: rnd(7, 13) },
+      { pos: slot.front.clone(), dwell: 0 },
+      { pos: sink.clone(), dwell: rnd(2.5, 4.5) },
+    ];
+    c.say('去一下洗手間', 2);
+    return true;
+  }
+
+  private updateWc(c: Customer, dt: number) {
+    const room = c.wcRoom!;
+    if (c.wcStep >= c.wcSteps.length) return this.finishWc(c);
+    const st = c.wcSteps[c.wcStep];
+    this.goTo(c, st.pos);
+    if (!this.atDest(c)) return;
+    if (c.wcT < 0) {
+      c.wcT = st.dwell;
+      if (c.wcStep === 1) {
+        room.uses++;
+        this.hooks.onWcUse(room);
+        room.dirt = Math.min(1, room.dirt + 0.11);
+        if (room.dirt >= Restroom.GROSS) {
+          c.mood -= 0.22;
+          c.say('廁所好髒…😖', 2.6);
+          this.hooks.onWcGross(c, room);
+        }
+      }
+    }
+    c.wcT -= dt;
+    if (c.wcT <= 0) {
+      c.wcStep++;
+      c.wcT = -1;
+    }
+  }
+
+  private finishWc(c: Customer) {
+    const room = c.wcRoom!;
+    room.release(c);
+    c.wcRoom = null;
+    c.wcDone = true;
+    if (!this.hooks.isOpen()) return this.leave(c, 'closed');
+    if (room.dirt < 0.35) c.mood = Math.min(1, c.mood + 0.05);
+    const m = this.chooseMachine(c);
+    if (!m || c.coins <= 0) return this.leave(c, c.coins > 0 ? 'nostock' : 'done');
+    c.say('回來繼續夾!', 1.6);
+    this.joinMachine(c, m);
+  }
+
   private leave(c: Customer, reason: LeaveReason) {
     if (c.machine) {
       const i = c.machine.line.indexOf(c);
@@ -467,6 +553,10 @@ export class CustomerManager {
       if (c.ex.using === c) c.ex.using = null;
     }
     if (c.needsHelp) this.hooks.cancelHelp(c);
+    if (c.wcRoom) {
+      c.wcRoom.release(c);
+      c.wcRoom = null;
+    }
     c.needsHelp = null;
     c.machine = null;
     c.ex = null;
@@ -478,7 +568,7 @@ export class CustomerManager {
   /** 打烊:還沒輪到的人離開 */
   closeShop() {
     for (const c of [...this.all]) {
-      if (c.state === 'leaving' || c.state === 'playing' || c.state === 'buying') continue;
+      if (c.state === 'leaving' || c.state === 'playing' || c.state === 'buying' || c.state === 'wc') continue;
       this.leave(c, 'closed');
     }
   }
@@ -546,6 +636,7 @@ export class CustomerManager {
     for (let k = this.all.length - 1; k >= 0; k--) {
       const c = this.all[k];
       if (c.state === 'leaving') this.goTo(c, DOOR_OUT);
+      else if (c.state === 'wc') this.updateWc(c, dt);
       let pose: Pose = 'idle';
       if (c.slipT > 0) {
         c.slipT -= dt;

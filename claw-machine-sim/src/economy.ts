@@ -22,6 +22,14 @@ export interface Pack {
   weights: Record<Rarity, number>;
 }
 
+/** 每個紙箱裝幾隻 */
+export const BOX_SIZE = 20;
+/** 急件加價與到貨時間(遊戲秒) */
+export const RUSH_FEE = 0.2;
+export const RUSH_ETA = 24;
+/** 退貨可退回成本的比例 */
+export const RETURN_RATE = 0.6;
+
 export const PACKS: Pack[] = [
   { id: 'small', name: '小批進貨', desc: '20 隻,多為普通款', count: 20, price: 560, weights: { common: 0.7, rare: 0.25, ssr: 0.05 } },
   { id: 'std', name: '標準進貨箱', desc: '100 隻,多為普通款', count: 100, price: 2600, weights: { common: 0.7, rare: 0.25, ssr: 0.05 } },
@@ -67,6 +75,20 @@ export interface DayStats {
   faults: number;
   stuck: number;
   jams: number;
+  // 進出貨與後場
+  /** 貨車送到倉庫的娃娃隻數 */
+  inbound: number;
+  /** 退回供應商的隻數 */
+  returned: number;
+  /** 從倉庫補到機台的隻數 */
+  shelved: number;
+  unloads: number;
+  loads: number;
+  wcVisits: number;
+  wcCleans: number;
+  rests: number;
+  /** 櫃檯人工兌幣的次數 */
+  counterServed: number;
 }
 
 export const newStats = (): DayStats => ({
@@ -74,6 +96,7 @@ export const newStats = (): DayStats => ({
   restocks: 0, cleans: 0, assists: 0, repairs: 0, mops: 0, retrievals: 0, refills: 0,
   cogs: 0, purchases: 0, satSum: 0, satCount: 0, walkouts: 0, noStock: 0, angry: 0,
   spills: 0, slips: 0, faults: 0, stuck: 0, jams: 0,
+  inbound: 0, returned: 0, shelved: 0, unloads: 0, loads: 0, wcVisits: 0, wcCleans: 0, rests: 0, counterServed: 0,
 });
 
 /** 劇情選擇帶來的暫時店況加成(持續幾天) */
@@ -109,6 +132,19 @@ export interface StaffSave {
   leaveUntil: number;
 }
 
+/** 在途或已到倉庫卸貨區的貨運單(存檔用) */
+export interface ShipSave {
+  id: number;
+  dir: 'in' | 'out';
+  label: string;
+  /** 進貨:還沒卸進倉庫的娃娃 */
+  items: StockItem[];
+  /** 退貨:還要從倉庫搬出幾隻 */
+  want: number;
+  /** 還要幾遊戲秒到達;-1 表示明天早上到 */
+  eta: number;
+}
+
 export interface GameState {
   day: number;
   cash: number;
@@ -128,6 +164,11 @@ export interface GameState {
   storyDay: Record<string, number>;
   chains: { id: string; day: number }[];
   last?: { revenue: number; profit: number; faults: number };
+  /** 運送中的進貨與退貨 */
+  shipments: ShipSave[];
+  shipSeq: number;
+  /** 是否派一位店員坐櫃檯(開放人工兌幣與客服) */
+  counterOpen: boolean;
 }
 
 export const initialState = (): GameState => ({
@@ -146,6 +187,9 @@ export const initialState = (): GameState => ({
   storyLog: [],
   storyDay: {},
   chains: [],
+  shipments: [],
+  shipSeq: 1,
+  counterOpen: true,
 });
 
 const KEY = 'claw-club-save-v3';

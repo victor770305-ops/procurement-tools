@@ -1,5 +1,6 @@
 import * as THREE from 'three';
-import { COLS, EXCHANGES, HALL, ROWS, SHELF, STAFF_DOOR, SX, rowZ } from './layout';
+import { COLS, EXCHANGES, HALL, ROOM_LIST, ROWS, SX, rowZ } from './layout';
+import { buildBackOfHouse } from './rooms';
 import { aisleTileTexture, carpetTexture, glowTexture, neonTexture, posterTexture } from './textures';
 import { isMobile } from './render';
 
@@ -7,6 +8,8 @@ export interface Store {
   group: THREE.Group;
   /** 依倉庫庫存顯示貨架上的紙箱數量 */
   setShelfStock(n: number): void;
+  /** 廁所髒污程度 0~1 */
+  setWcDirt(id: 'wcF' | 'wcM', dirt: number): void;
 }
 
 const std = (c: number, rough = 0.7, metal = 0) => new THREE.MeshStandardMaterial({ color: c, roughness: rough, metalness: metal });
@@ -15,7 +18,7 @@ const std = (c: number, rough = 0.7, metal = 0) => new THREE.MeshStandardMateria
 const decal = (map: THREE.Texture | null, opts: THREE.MeshBasicMaterialParameters = {}) =>
   new THREE.MeshBasicMaterial({ map, transparent: true, depthWrite: false, polygonOffset: true, polygonOffsetFactor: -2, polygonOffsetUnits: -2, toneMapped: false, ...opts });
 
-/** 店內大廳:一整片磁磚地板、機台列下的地毯帶、牆面、前廳、倉庫貨架、員工休息室入口、室內照明 */
+/** 店內大廳:一整片磁磚地板、機台列下的地毯帶、牆面(含通往後場房間的門洞)、前廳、室內照明;後場房間見 rooms.ts */
 export function buildStore(): Store {
   const g = new THREE.Group();
   const add = (geo: THREE.BufferGeometry, m: THREE.Material, x: number, y: number, z: number, parent: THREE.Object3D = g, shadow = true) => {
@@ -62,14 +65,35 @@ export function buildStore(): Store {
     box(w + 0.04, 0.16, d + 0.04, trimMat, x, 0.08, z);
   };
   wall(cx, HALL.minZ, W + 0.3, 0.3, 4.2);
-  wall(HALL.minX, cz, 0.3, D, 2.2);
-  wall(HALL.maxX, cz, 0.3, D, 2.2);
+  // 左右牆:在每個後場房間的門口留出門洞(寬 1.5 公尺)
+  const sideWall = (x: number, doors: number[]) => {
+    const sorted = [...doors].sort((a, b) => a - b);
+    let z = HALL.minZ - 0.15;
+    for (const dz of sorted) {
+      const a = dz - 0.75;
+      wallSeg(x, z, a, 1.5);
+      z = dz + 0.75;
+    }
+    wallSeg(x, z, HALL.maxZ + 0.15, 1.5);
+    for (const dz of sorted) {
+      for (const s of [-1, 1]) box(0.34, 1.7, 0.12, frame, x, 0.85, dz + s * 0.78);
+      box(0.34, 0.12, 1.68, frame, x, 1.74, dz);
+    }
+  };
+  const wallSeg = (x: number, z0: number, z1: number, h: number) => {
+    const len = z1 - z0;
+    if (len < 0.05) return;
+    box(0.3, h, len, wallMat, x, h / 2, (z0 + z1) / 2);
+    box(0.34, 0.16, len + 0.04, trimMat, x, 0.08, (z0 + z1) / 2);
+  };
+  const frame = std(0x9aa0ad, 0.3, 0.9);
+  sideWall(HALL.minX, ROOM_LIST.filter((r) => r.side === 'W').map((r) => r.doorZ));
+  sideWall(HALL.maxX, ROOM_LIST.filter((r) => r.side === 'E').map((r) => r.doorZ));
   const frontW = (W - 3.4) / 2;
   wall(HALL.minX + frontW / 2, HALL.maxZ, frontW, 0.3, 1.1);
   wall(HALL.maxX - frontW / 2, HALL.maxZ, frontW, 0.3, 1.1);
 
   // 大門:玻璃雙開門
-  const frame = std(0x9aa0ad, 0.3, 0.9);
   box(0.16, 3.2, 0.2, frame, -1.7, 1.6, HALL.maxZ);
   box(0.16, 3.2, 0.2, frame, 1.7, 1.6, HALL.maxZ);
   box(3.56, 0.18, 0.2, frame, 0, 3.2, HALL.maxZ);
@@ -140,57 +164,20 @@ export function buildStore(): Store {
   plant(0, 13.4);
   const bin = (x: number, z: number) => add(new THREE.CylinderGeometry(0.22, 0.2, 0.7, 14), std(0x4a5160, 0.5, 0.4), x, 0.35, z);
   bin(-4.6, 13.6);
-  bin(4.6, 13.6);
+  bin(8.9, 20.0);
   const vend = new THREE.Group();
   box(1.0, 1.9, 0.8, std(0xc0392b, 0.35, 0.3), 0, 0.95, 0, vend);
   const vf = new THREE.Mesh(new THREE.PlaneGeometry(0.72, 1.2), new THREE.MeshBasicMaterial({ color: new THREE.Color(1.1, 1.3, 1.4), toneMapped: false }));
   vf.position.set(0, 1.12, 0.41);
   vend.add(vf);
   for (let i = 0; i < 5; i++) box(0.62, 0.02, 0.02, std(0x9aa0ad, 0.4, 0.8), 0, 0.7 + i * 0.22, 0.43, vend);
-  vend.position.set(HALL.minX + 0.6, 0, 13.8);
+  vend.position.set(HALL.minX + 0.6, 0, 10.6);
   vend.rotation.y = Math.PI / 2;
   g.add(vend);
 
-  // ---------- 員工休息室入口(右牆) ----------
-  const door = new THREE.Group();
-  door.position.set(HALL.maxX - 0.17, 0, STAFF_DOOR.z);
-  door.rotation.y = -Math.PI / 2;
-  g.add(door);
-  box(1.3, 2.3, 0.06, std(0x39465a, 0.5), 0, 1.15, 0, door);
-  box(0.06, 2.4, 0.1, frame, -0.68, 1.2, 0, door);
-  box(0.06, 2.4, 0.1, frame, 0.68, 1.2, 0, door);
-  box(1.42, 0.06, 0.1, frame, 0, 2.38, 0, door);
-  const staffSign = new THREE.Mesh(new THREE.PlaneGeometry(1.2, 0.3), decal(neonTexture('STAFF', '#ffd45e', 512, 128, 'bold 80px "Arial Black", sans-serif'), { blending: THREE.AdditiveBlending }));
-  staffSign.position.set(0, 2.62, 0.05);
-  door.add(staffSign);
-
-  // ---------- 倉庫貨架(靠左牆) ----------
-  const shelf = new THREE.Group();
-  shelf.position.set(SHELF.x, 0, SHELF.z);
-  shelf.rotation.y = Math.PI / 2;
-  g.add(shelf);
-  const metal = std(0x59607a, 0.35, 0.9);
-  const cardboard = std(0xc89a5b, 0.9);
-  const tape = std(0xe8d9b0, 0.7);
-  const crates: THREE.Group[] = [];
-  for (const ox of [-1.5, 1.5]) {
-    for (const sx of [-1.2, 1.2]) for (const sz of [-0.35, 0.35]) box(0.06, 2.4, 0.06, metal, ox + sx, 1.2, sz, shelf);
-    for (const y of [0.15, 0.85, 1.55, 2.25]) box(2.5, 0.05, 0.8, metal, ox, y, 0, shelf);
-    for (const y of [0.18, 0.88, 1.58]) {
-      for (let i = 0; i < 4; i++) {
-        const c = new THREE.Group();
-        box(0.5, 0.4, 0.5, cardboard, 0, 0.22, 0, c);
-        box(0.52, 0.02, 0.1, tape, 0, 0.43, 0, c);
-        c.position.set(ox - 0.9 + i * 0.6, y, 0);
-        c.rotation.y = (Math.random() - 0.5) * 0.2;
-        shelf.add(c);
-        crates.push(c);
-      }
-    }
-  }
-  const shelfSign = new THREE.Mesh(new THREE.PlaneGeometry(2.2, 0.55), decal(neonTexture('STOCK', '#8fe8ff', 640, 160, 'bold 120px "Arial Black", sans-serif'), { blending: THREE.AdditiveBlending }));
-  shelfSign.position.set(0, 3.0, 0.45);
-  shelf.add(shelfSign);
+  // ---------- 後場:倉庫、辦公室、休息室、廁所與服務櫃檯 ----------
+  const back = buildBackOfHouse();
+  g.add(back.group);
 
   // ---------- 室內照明 ----------
   g.add(new THREE.HemisphereLight(0xdfe8ff, 0x4a3b30, 0.5));
@@ -199,8 +186,8 @@ export function buildStore(): Store {
   sun.target.position.set(0, 0, 4);
   sun.castShadow = !isMobile;
   sun.shadow.mapSize.set(2048, 2048);
-  sun.shadow.camera.left = -13;
-  sun.shadow.camera.right = 13;
+  sun.shadow.camera.left = -25;
+  sun.shadow.camera.right = 22;
   sun.shadow.camera.top = 26;
   sun.shadow.camera.bottom = -20;
   sun.shadow.camera.near = 5;
@@ -209,7 +196,7 @@ export function buildStore(): Store {
   sun.shadow.normalBias = 0.04;
   sun.shadow.radius = 3;
   g.add(sun, sun.target);
-  for (const [x, z, c, i] of [[0, 17, 0xffe6c4, 14], [-6, 16, 0xffe6c4, 8], [6, 16, 0xffe6c4, 8]] as const) {
+  for (const [x, z, c, i] of [[0, 17, 0xffe6c4, 14], [-6, 16, 0xffe6c4, 8], [6, 16, 0xffe6c4, 8], [-14, 8, 0xe8f0ff, 10], [14, 12, 0xfff0d8, 10]] as const) {
     const l = new THREE.PointLight(c, i, 12, 2);
     l.position.set(x, 3.2, z);
     g.add(l);
@@ -217,9 +204,7 @@ export function buildStore(): Store {
 
   return {
     group: g,
-    setShelfStock(n: number) {
-      const show = Math.min(crates.length, Math.ceil(n / 12));
-      crates.forEach((c, i) => (c.visible = i < show));
-    },
+    setShelfStock: (n: number) => back.setStock(n),
+    setWcDirt: (id, d) => back.setWcDirt(id, d),
   };
 }

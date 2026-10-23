@@ -552,3 +552,50 @@ function make_feltTexture() {
 
 export const panelTexture = (hue: number, mascot: number) => cached(`panel:${hue}:${mascot}`, () => make_panelTexture(hue, mascot));
 export const feltTexture = () => cached('felt', make_feltTexture);
+
+/** 後場房間的地板:水泥(倉庫)、木紋(辦公室與休息室)、白瓷磚(廁所) */
+export const roomFloorTexture = (kind: 'concrete' | 'wood' | 'tile') =>
+  cached(`room:${kind}`, () => {
+    const { c, g } = canvas(512, 512);
+    if (kind === 'concrete') {
+      g.fillStyle = '#8c8f96';
+      g.fillRect(0, 0, 512, 512);
+      for (let i = 0; i < 2600; i++) {
+        const v = Math.floor(rnd(110, 168));
+        g.fillStyle = `rgba(${v},${v},${v + 4},0.18)`;
+        g.fillRect(rnd(0, 512), rnd(0, 512), rnd(2, 10), rnd(2, 10));
+      }
+      g.strokeStyle = 'rgba(60,62,70,0.45)';
+      g.lineWidth = 2;
+      g.strokeRect(1, 1, 510, 510);
+    } else if (kind === 'wood') {
+      for (let i = 0; i < 8; i++) {
+        const v = Math.floor(rnd(150, 178));
+        g.fillStyle = `rgb(${v + 28},${v - 4},${v - 52})`;
+        g.fillRect(0, i * 64, 512, 62);
+        for (let k = 0; k < 14; k++) {
+          g.strokeStyle = `rgba(90,56,28,${rnd(0.05, 0.16)})`;
+          g.lineWidth = rnd(0.5, 1.6);
+          g.beginPath();
+          const y = i * 64 + rnd(4, 58);
+          g.moveTo(0, y);
+          g.bezierCurveTo(150, y + rnd(-3, 3), 340, y + rnd(-3, 3), 512, y);
+          g.stroke();
+        }
+        g.fillStyle = 'rgba(40,24,10,0.5)';
+        g.fillRect(0, i * 64 + 62, 512, 2);
+        g.fillRect(rnd(40, 470), i * 64, 2, 62);
+      }
+    } else {
+      g.fillStyle = '#aab6c2';
+      g.fillRect(0, 0, 512, 512);
+      for (let y = 0; y < 4; y++) {
+        for (let x = 0; x < 4; x++) {
+          const v = Math.floor(rnd(228, 244));
+          g.fillStyle = `rgb(${v - 8},${v},${v + 8})`;
+          g.fillRect(x * 128 + 3, y * 128 + 3, 122, 122);
+        }
+      }
+    }
+    return tex(c);
+  });

@@ -4,7 +4,7 @@ import { EffectComposer } from 'three/examples/jsm/postprocessing/EffectComposer
 import { RenderPass } from 'three/examples/jsm/postprocessing/RenderPass.js';
 import { UnrealBloomPass } from 'three/examples/jsm/postprocessing/UnrealBloomPass.js';
 import { OutputPass } from 'three/examples/jsm/postprocessing/OutputPass.js';
-import { HALL } from './layout';
+import { WORLD } from './layout';
 import type { Machine } from './machine';
 
 export const isMobile = matchMedia('(pointer: coarse)').matches || Math.min(innerWidth, innerHeight) < 600;
@@ -14,7 +14,7 @@ export type CamPreset = 'god' | 'front';
 const GOD_FOV = 40;
 const FRONT_FOV = 40;
 const D_MIN = 3.2;
-const D_MAX = 46;
+const D_MAX = 52;
 
 /** 鏡頭:上帝視角(可拖曳平移、滾輪/雙指縮放、點選機台)與近看選取的機台 */
 export class Renderer {
@@ -30,10 +30,10 @@ export class Renderer {
   private preset: CamPreset = 'god';
   private focus = new THREE.Vector3();
   private inset = 0;
-  private godTarget = new THREE.Vector3(0, 0, 5);
-  private godDist = 32;
-  private curTarget = new THREE.Vector3(0, 0, 5);
-  private curDist = 32;
+  private godTarget = new THREE.Vector3(-1, 0, 7);
+  private godDist = 40;
+  private curTarget = new THREE.Vector3(-1, 0, 7);
+  private curDist = 40;
   private curPos = new THREE.Vector3();
   private curFov = GOD_FOV;
   private pointer = new THREE.Vector2();
@@ -175,8 +175,8 @@ export class Renderer {
     this.clampTarget();
   }
   private clampTarget() {
-    this.godTarget.x = THREE.MathUtils.clamp(this.godTarget.x, HALL.minX, HALL.maxX);
-    this.godTarget.z = THREE.MathUtils.clamp(this.godTarget.z, HALL.minZ, HALL.maxZ);
+    this.godTarget.x = THREE.MathUtils.clamp(this.godTarget.x, WORLD.minX, WORLD.maxX);
+    this.godTarget.z = THREE.MathUtils.clamp(this.godTarget.z, WORLD.minZ, WORLD.maxZ);
   }
   private zoomBy(factor: number) {
     this.godDist = THREE.MathUtils.clamp(this.godDist * factor, D_MIN, D_MAX);

@@ -1,6 +1,6 @@
 import * as THREE from 'three';
 import type { Character } from './characters';
-import { PACKS, Pack } from './economy';
+import { PACKS, Pack, RUSH_FEE } from './economy';
 import { Expression, portrait } from './portrait';
 import type { Marker } from './game';
 
@@ -40,14 +40,28 @@ export interface BubbleItem {
   who: string;
 }
 
+export interface ShipRow {
+  dir: 'in' | 'out';
+  label: string;
+  state: string;
+  boxes: number;
+  left: number;
+}
+
 export interface OpsSnapshot {
   summary: { running: number; waiting: number; fault: number; empty: number; stuck: number; service: number; idle: number; customers: number };
   selected: { name: string; status: string; stock: number; queue: number; plays: number; wins: number; dirt: number; detail: string };
   problems: { text: string; who: string; pri: number; machine?: number }[];
-  staff: { name: string; title: string; action: string; done: number }[];
+  staff: { name: string; title: string; action: string; done: number; fatigue: number; cashier: boolean }[];
   shift: string;
   exchanges: { name: string; state: string; coins: number; queue: number }[];
   warehouse: number;
+  ships: ShipRow[];
+  facilities: {
+    wc: { name: string; dirt: number; busy: number; cap: number }[];
+    lounge: { n: number; cap: number };
+    counter: { on: boolean; ready: boolean; who: string };
+  };
   mods?: { label: string; days: number }[];
   feed: { time: string; text: string; kind: string }[];
 }
@@ -240,13 +254,26 @@ export class Hud {
       el.onclick = () => el.dataset.m && this.onSelectMachine?.(Number(el.dataset.m));
     });
     $('opsStaff').innerHTML =
-      s.staff.map((t, i) => `<div class="srow" data-i="${i}"><span><b>${t.name}</b> · ${t.title}</span><span>${t.action}</span></div>`).join('') || '<div class="empty">目前沒有店員在班</div>';
+      s.staff
+        .map(
+          (t, i) =>
+            `<div class="srow" data-i="${i}"><span><b>${t.name}</b> · ${t.cashier ? '櫃檯' : t.title}<i class="fat ${t.fatigue > 0.62 ? 'hi' : ''}" title="疲勞"><u style="width:${Math.round(t.fatigue * 100)}%"></u></i></span><span>${t.action}</span></div>`,
+        )
+        .join('') || '<div class="empty">目前沒有店員在班</div>';
     $('opsStaff').querySelectorAll<HTMLElement>('.srow').forEach((el) => {
       el.onclick = () => this.onSelectStaff?.(Number(el.dataset.i));
     });
     $('opsEx').innerHTML = s.exchanges
-      .map((e) => `<div class="srow"><span><b>${e.name}</b> · 排隊 ${e.queue}</span><span class="${e.state !== 'ok' ? 'bad' : ''}">${e.state === 'ok' ? '正常' : e.state === 'jam' ? '卡鈔' : '缺零錢'} · 零錢 ${e.coins}</span></div>`)
+      .map((e) => `<div class="srow"><span><b>${e.name}</b> · 排隊 ${e.queue}</span><span class="${e.state !== 'ok' ? 'bad' : ''}">${e.state === 'ok' ? '正常' : e.state === 'jam' ? '卡鈔' : e.state === 'closed' ? '無人值班' : '缺零錢'}${e.coins >= 0 ? ` · 零錢 ${e.coins}` : ''}</span></div>`)
       .join('');
+    $('opsShips').innerHTML = s.ships.length
+      ? s.ships.map((x) => `<div class="srow"><span>${x.dir === 'in' ? '📥' : '📤'} <b>${x.label}</b></span><span>${x.state}${x.state === '卸貨中' || x.state === '裝車中' ? ` · 剩 ${x.left}/${x.boxes} 箱` : ''}</span></div>`).join('')
+      : '<div class="empty">沒有運送中的貨</div>';
+    const f = s.facilities;
+    $('opsFac').innerHTML =
+      f.wc.map((w) => `<div class="srow"><span><b>${w.name}</b> · 使用中 ${w.busy}/${w.cap}</span><span class="${w.dirt >= 0.7 ? 'bad' : ''}">髒污 ${Math.round(w.dirt * 100)}%</span></div>`).join('') +
+      `<div class="srow"><span><b>員工休息室</b></span><span>${f.lounge.n} 人休息中</span></div>` +
+      `<div class="srow"><span><b>服務櫃檯</b></span><span class="${f.counter.on && !f.counter.ready ? 'bad' : ''}">${!f.counter.on ? '暫停' : f.counter.ready ? `${f.counter.who} 值班中` : '無人值班'}</span></div>`;
     if (feedVersion !== this.feedSeen) {
       this.feedSeen = feedVersion;
       $('opsFeed').innerHTML = s.feed.map((f) => `<div class="frow ${f.kind}"><time>${f.time}</time><span>${f.text}</span></div>`).join('');
@@ -274,7 +301,11 @@ export class Hud {
     });
   }
 
-  renderShop(o: { cash: number; machine: number; warehouse: number; capacity: number; canShelve: boolean; auto: boolean }, onBuy: (p: Pack) => void) {
+  renderShop(
+    o: { cash: number; machine: number; warehouse: number; capacity: number; canShelve: boolean; auto: boolean; ships: ShipRow[]; returnable: number },
+    onBuy: (p: Pack, rush: boolean) => void,
+    onReturn: (n: number) => void,
+  ) {
     $('shopInfo').textContent = `現金 NT$ ${fmt(o.cash)} · 機台共 ${fmt(o.machine)}/${fmt(o.capacity)} · 倉庫 ${fmt(o.warehouse)}`;
     ($('autoRestock') as HTMLInputElement).checked = o.auto;
     const list = $('packList');
@@ -283,13 +314,33 @@ export class Hud {
       const d = document.createElement('div');
       d.className = 'pack';
       d.innerHTML = `<div><b>${p.name}</b><span>${p.desc}</span></div>`;
-      const b = document.createElement('button');
-      b.textContent = `NT$ ${fmt(p.price)}`;
-      b.disabled = o.cash < p.price;
-      b.addEventListener('click', () => onBuy(p));
-      d.appendChild(b);
+      const wrap = document.createElement('div');
+      wrap.className = 'btns';
+      const rush = Math.round(p.price * (1 + RUSH_FEE));
+      for (const [label, price, isRush] of [['隔日到貨', p.price, false], ['急件', rush, true]] as const) {
+        const b = document.createElement('button');
+        b.innerHTML = `${label}<small>NT$ ${fmt(price)}</small>`;
+        b.disabled = o.cash < price;
+        b.addEventListener('click', () => onBuy(p, isRush));
+        wrap.appendChild(b);
+      }
+      d.appendChild(wrap);
       list.appendChild(d);
     }
+    const ret = $('returnList');
+    ret.innerHTML = '';
+    for (const n of [20, 60]) {
+      const b = document.createElement('button');
+      b.className = 'retbtn';
+      const k = Math.min(n, o.returnable);
+      b.textContent = `退回 ${k || n} 隻`;
+      b.disabled = o.returnable <= 0;
+      b.addEventListener('click', () => onReturn(n));
+      ret.appendChild(b);
+    }
+    $('shipList').innerHTML = o.ships.length
+      ? o.ships.map((x) => `<div class="srow"><span>${x.dir === 'in' ? '📥' : '📤'} ${x.label}</span><span>${x.state}${x.state === '卸貨中' || x.state === '裝車中' ? ` · 剩 ${x.left}/${x.boxes} 箱` : ''}</span></div>`).join('')
+      : '<div class="empty">目前沒有運送中的貨</div>';
     ($('btnShelve') as HTMLButtonElement).disabled = !o.canShelve;
   }
 
