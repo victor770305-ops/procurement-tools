@@ -172,7 +172,7 @@ export function buildStore(): Store {
   vf.position.set(0, 1.12, 0.41);
   vend.add(vf);
   for (let i = 0; i < 5; i++) box(0.62, 0.02, 0.02, std(0x9aa0ad, 0.4, 0.8), 0, 0.7 + i * 0.22, 0.43, vend);
-  vend.position.set(HALL.minX + 0.6, 0, 10.6);
+  vend.position.set(HALL.minX + 0.6, 0, 7.4);
   vend.rotation.y = Math.PI / 2;
   g.add(vend);
 

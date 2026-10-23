@@ -14,13 +14,24 @@ export type CamPreset = 'god' | 'front';
 const GOD_FOV = 40;
 const FRONT_FOV = 40;
 const D_MIN = 3.2;
-const D_MAX = 52;
+const D_MAX = 100;
+
+/** 臨界阻尼彈簧(類似 Unity SmoothDamp):平滑追向目標,速度連續 */
+function smoothDamp(cur: number, target: number, vel: Record<string, number>, key: string, smoothTime: number, dt: number) {
+  const omega = 2 / smoothTime;
+  const x = omega * dt;
+  const e = 1 / (1 + x + 0.48 * x * x + 0.235 * x * x * x);
+  const change = cur - target;
+  const temp = ((vel[key] ?? 0) + omega * change) * dt;
+  vel[key] = ((vel[key] ?? 0) - omega * temp) * e;
+  return target + (change + temp) * e;
+}
 
 /** 鏡頭:上帝視角(可拖曳平移、滾輪/雙指縮放、點選機台)與近看選取的機台 */
 export class Renderer {
   readonly renderer: THREE.WebGLRenderer;
   readonly scene = new THREE.Scene();
-  readonly camera = new THREE.PerspectiveCamera(GOD_FOV, 1, 0.5, 130);
+  readonly camera = new THREE.PerspectiveCamera(GOD_FOV, 1, 0.5, 300);
   /** 點選地面時呼叫(世界座標) */
   onPick?: (p: THREE.Vector3, clientX: number, clientY: number) => void;
   /** 追蹤中的物件(上帝視角下鏡頭會跟著走) */
@@ -36,6 +47,11 @@ export class Renderer {
   private curDist = 40;
   private curPos = new THREE.Vector3();
   private curFov = GOD_FOV;
+  private velTarget: Record<string, number> = { x: 0, y: 0, z: 0 };
+  private velDist = { v: 0 };
+  private velFov = { v: 0 };
+  /** 街景:記住拉出去之前的位置,再按一次就飛回來 */
+  private streetBack: { x: number; z: number; dist: number } | null = null;
   private pointer = new THREE.Vector2();
   private pointerSmooth = new THREE.Vector2();
   private first = true;
@@ -53,8 +69,8 @@ export class Renderer {
     r.toneMappingExposure = 1.0;
     this.renderer = r;
 
-    this.scene.background = new THREE.Color(0x0b0a12);
-    this.scene.fog = new THREE.FogExp2(0x0b0a12, 0.006);
+    this.scene.background = new THREE.Color(0x121827);
+    this.scene.fog = new THREE.FogExp2(0x121827, 0.0042);
     const pm = new THREE.PMREMGenerator(r);
     this.scene.environment = pm.fromScene(new RoomEnvironment(), 0.04).texture;
     this.scene.environmentIntensity = 0.42;
@@ -126,8 +142,34 @@ export class Renderer {
     this.focus.set(x, 0, z);
   }
 
+  get inStreetView() {
+    return this.streetBack !== null;
+  }
+  /** 目前鏡頭中心(世界座標) */
+  get viewTarget() {
+    return this.curTarget;
+  }
+  /** 拉出店外看整條街;再呼叫一次(或任何 flyTo)就飛回去 */
+  toggleStreet() {
+    if (this.streetBack) {
+      const b = this.streetBack;
+      this.streetBack = null;
+      this.preset = 'god';
+      this.godTarget.set(b.x, 0, b.z);
+      this.godDist = b.dist;
+      return false;
+    }
+    this.streetBack = { x: this.godTarget.x, z: this.godTarget.z, dist: this.godDist };
+    this.following = null;
+    this.preset = 'god';
+    this.godTarget.set(2, 0, 27);
+    this.godDist = 62;
+    return true;
+  }
+
   /** 上帝視角飛到某處並拉近 */
   flyTo(x: number, z: number, dist = 7) {
+    this.streetBack = null;
     this.preset = 'god';
     this.godTarget.set(x, 0, z);
     this.godDist = Math.min(this.godDist, dist);
@@ -183,7 +225,7 @@ export class Renderer {
   }
   /** 離得越遠越接近俯視,拉近後越接近平視 */
   private pitchFor(D: number) {
-    return THREE.MathUtils.degToRad(THREE.MathUtils.lerp(28, 64, THREE.MathUtils.smoothstep(D, 3, 44)));
+    return THREE.MathUtils.degToRad(THREE.MathUtils.lerp(28, 64, THREE.MathUtils.smoothstep(D, 3, 70)));
   }
 
   private bindControls() {
@@ -248,7 +290,6 @@ export class Renderer {
   }
 
   update(dt: number, t: number) {
-    const k = 1 - Math.exp(-dt * 4);
     let wantTarget: THREE.Vector3;
     let wantDist: number;
     let wantFov: number;
@@ -277,9 +318,15 @@ export class Renderer {
       this.curDist = wantDist;
       this.first = false;
     }
-    this.curTarget.lerp(wantTarget, k);
-    this.curDist += (wantDist - this.curDist) * k;
-    this.curFov += (wantFov - this.curFov) * k;
+    // 臨界阻尼:起步與停止都平順,不會有剎車感,也不會過衝
+    const sd = Math.min(dt, 0.05);
+    const far = Math.abs(wantDist - this.curDist) > 12 || this.curTarget.distanceTo(wantTarget) > 12;
+    const st = far ? 0.55 : 0.3;
+    this.curTarget.x = smoothDamp(this.curTarget.x, wantTarget.x, this.velTarget, 'x', st, sd);
+    this.curTarget.y = smoothDamp(this.curTarget.y, wantTarget.y, this.velTarget, 'y', st, sd);
+    this.curTarget.z = smoothDamp(this.curTarget.z, wantTarget.z, this.velTarget, 'z', st, sd);
+    this.curDist = smoothDamp(this.curDist, wantDist, this.velDist, 'v', st, sd);
+    this.curFov = smoothDamp(this.curFov, wantFov, this.velFov, 'v', st, sd);
     if (Math.abs(this.camera.fov - this.curFov) > 0.01) {
       this.camera.fov = this.curFov;
       this.camera.updateProjectionMatrix();

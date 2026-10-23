@@ -2,6 +2,7 @@ import RAPIER from '@dimforge/rapier3d-compat';
 import * as THREE from 'three';
 import { Sfx } from './audio';
 import { RARITY } from './config';
+import { Street } from './street';
 import { buildStore } from './environment';
 import { Game } from './game';
 import { Input } from './input';
@@ -24,6 +25,7 @@ async function main() {
 
   const store = buildStore();
   gfx.scene.add(store.group);
+  const street = new Street(gfx.scene);
 
   // 遠景層:60 台機台一次畫完
   const grids = Array.from({ length: N_MACHINES }, (_, i) => gridOf(i));
@@ -168,6 +170,12 @@ async function main() {
       hud.say('上帝視角(拖曳平移、滾輪縮放)', 1600);
     }
   });
+  $('btnStreet').addEventListener('click', () => {
+    sfx.click();
+    const out = gfx.toggleStreet();
+    $('btnStreet').classList.toggle('on', out);
+    hud.say(out ? '街景:馬路、對面商店與車流(再按一次回到店內)' : '回到店內', 1800);
+  });
   $('btnSnd').addEventListener('click', () => {
     unlock();
     sfx.setMuted(!sfx.muted);
@@ -256,6 +264,9 @@ async function main() {
     const sc = game.sel.claw;
     sfx.setMotor(sc ? Math.min(1, sc.speedMag / 0.6) : 0);
     gfx.setLeftInset(!hud.el.ops.hidden && innerWidth >= 900 ? 360 : 0);
+    // 鏡頭拉近到店內時,街景(車流、行人)暫停更新
+    street.active = gfx.godDistance > 24 || gfx.viewTarget.z > 15 || gfx.currentPreset !== 'god';
+    street.update(dt, gfx.godDistance < 30);
     gfx.update(dt, time);
     requestAnimationFrame(loop);
   };

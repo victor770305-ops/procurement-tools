@@ -99,19 +99,19 @@ const mkRoom = (id: RoomId, name: string, side: 'E' | 'W', depthX: number, z0: n
   };
 };
 export const ROOMS: Record<RoomId, Room> = {
-  warehouse: mkRoom('warehouse', '倉庫', 'W', 9, 2.6, 12.2, 8.0),
-  wcF: mkRoom('wcF', '女廁', 'W', 8, 12.2, 16.9, 14.5),
-  wcM: mkRoom('wcM', '男廁', 'W', 8, 16.9, 21.6, 19.2),
-  office: mkRoom('office', '辦公室', 'E', 8, 2.6, 12.2, 7.0),
-  lounge: mkRoom('lounge', '員工休息室', 'E', 8, 12.2, 21.6, 17.2),
+  warehouse: mkRoom('warehouse', '倉庫', 'W', 6.4, 8.4, 14.6, 11.5),
+  wcF: mkRoom('wcF', '女廁', 'W', 4.2, 14.6, 18.0, 16.3),
+  wcM: mkRoom('wcM', '男廁', 'W', 4.2, 18.0, 21.4, 19.7),
+  office: mkRoom('office', '辦公室', 'E', 4.8, 10.4, 15.6, 12.8),
+  lounge: mkRoom('lounge', '員工休息室', 'E', 5.2, 15.6, 21.4, 18.0),
 };
 export const ROOM_LIST = Object.values(ROOMS);
 /** 鏡頭與平移的範圍(含兩側房間與倉庫外的卸貨區) */
-export const WORLD = { minX: -34, maxX: 18, minZ: -13, maxZ: 22 };
+export const WORLD = { minX: -80, maxX: 70, minZ: -34, maxZ: 70 };
 /** 倉庫內:貨架取貨/上架站位、卸貨口站位(貨車停在倉庫西牆外) */
-export const shelfSpot = () => new THREE.Vector3(-13.4, 0, 5.5);
-export const dockSpot = () => new THREE.Vector3(-17.7, 0, ROOMS.warehouse.doorZ);
-export const TRUCK_DOCK = { x: -22.3, z: ROOMS.warehouse.doorZ, rearX: -19.1 };
+export const shelfSpot = () => new THREE.Vector3(-12.8, 0, 10.3);
+export const dockSpot = () => new THREE.Vector3(-15.1, 0, ROOMS.warehouse.doorZ);
+export const TRUCK_DOCK = { x: -19.6, z: ROOMS.warehouse.doorZ, rearX: -16.5 };
 /** 廁所:每個隔間/小便斗是一個使用位,sinks 是洗手台站位 */
 export interface WcSlot {
   front: THREE.Vector3;
@@ -120,35 +120,35 @@ export interface WcSlot {
 export const WC_LAYOUT: Record<'wcF' | 'wcM', { slots: WcSlot[]; sinks: THREE.Vector3[]; clean: THREE.Vector3 }> = {
   wcF: {
     slots: [
-      { front: new THREE.Vector3(-16.8, 0, 14.9), pos: new THREE.Vector3(-16.8, 0, 13.2) },
-      { front: new THREE.Vector3(-15.6, 0, 14.9), pos: new THREE.Vector3(-15.6, 0, 13.2) },
+      { front: new THREE.Vector3(-13.15, 0, 16.6), pos: new THREE.Vector3(-13.15, 0, 15.45) },
+      { front: new THREE.Vector3(-12.05, 0, 16.6), pos: new THREE.Vector3(-12.05, 0, 15.45) },
     ],
-    sinks: [new THREE.Vector3(-12.6, 0, 15.8), new THREE.Vector3(-11.4, 0, 15.8)],
-    clean: new THREE.Vector3(-13.6, 0, 14.6),
+    sinks: [new THREE.Vector3(-12.4, 0, 17.1), new THREE.Vector3(-11.2, 0, 17.1)],
+    clean: new THREE.Vector3(-11.6, 0, 16.4),
   },
   wcM: {
     slots: [
-      { front: new THREE.Vector3(-16.8, 0, 19.6), pos: new THREE.Vector3(-16.8, 0, 18.1) },
-      { front: new THREE.Vector3(-15.4, 0, 18.9), pos: new THREE.Vector3(-15.4, 0, 17.9) },
-      { front: new THREE.Vector3(-14.3, 0, 18.9), pos: new THREE.Vector3(-14.3, 0, 17.9) },
+      { front: new THREE.Vector3(-13.15, 0, 20.0), pos: new THREE.Vector3(-13.15, 0, 18.8) },
+      { front: new THREE.Vector3(-11.9, 0, 19.5), pos: new THREE.Vector3(-11.9, 0, 18.85) },
+      { front: new THREE.Vector3(-11.0, 0, 19.5), pos: new THREE.Vector3(-11.0, 0, 18.85) },
     ],
-    sinks: [new THREE.Vector3(-12.6, 0, 20.5), new THREE.Vector3(-11.4, 0, 20.5)],
-    clean: new THREE.Vector3(-13.6, 0, 19.3),
+    sinks: [new THREE.Vector3(-12.4, 0, 20.6), new THREE.Vector3(-11.2, 0, 20.6)],
+    clean: new THREE.Vector3(-11.6, 0, 19.9),
   },
 };
 /** 前廳靠西牆的零售設備:冰箱與展示架,spot 是客人購物站位 */
 export const RETAIL_SPOTS = {
-  drink: { x: -8.95, z: 16.9, spot: new THREE.Vector3(-7.6, 0, 16.9) },
-  snack: { x: -8.95, z: 20.95, spot: new THREE.Vector3(-7.6, 0, 20.95) },
+  drink: { x: -8.95, z: 18.0, spot: new THREE.Vector3(-7.6, 0, 18.0) },
+  snack: { x: -8.95, z: 13.9, spot: new THREE.Vector3(-7.6, 0, 13.9) },
 };
 /** 員工休息室入口(店員上下班經過) */
 export const STAFF_DOOR = ROOMS.lounge.outside.clone();
-export const lockerSpot = () => new THREE.Vector3(12.4, 0, 14.0);
+export const lockerSpot = () => new THREE.Vector3(12.0, 0, 16.7);
 /** 休息室裡可以坐/站的休息位置 */
-export const REST_SPOTS = [new THREE.Vector3(16.0, 0, 18.3), new THREE.Vector3(16.0, 0, 20.1), new THREE.Vector3(15.6, 0, 14.9), new THREE.Vector3(14.0, 0, 19.6)];
+export const REST_SPOTS = [new THREE.Vector3(13.6, 0, 19.0), new THREE.Vector3(13.6, 0, 20.2), new THREE.Vector3(13.5, 0, 17.4), new THREE.Vector3(12.0, 0, 20.4)];
 /** 辦公室:辦公桌後的位置、保險箱旁 */
-export const officeDesk = () => new THREE.Vector3(15.3, 0, 6.2);
-export const officeSafe = () => new THREE.Vector3(15.6, 0, 3.9);
+export const officeDesk = () => new THREE.Vector3(12.8, 0, 12.6);
+export const officeSafe = () => new THREE.Vector3(13.0, 0, 11.5);
 
 /** 玩家站位:機台正前方;後面的人往走道方向排隊 */
 export const machineStation = (g: Grid, i: number) => (i === 0 ? new THREE.Vector3(g.x, 0, g.z + 0.98) : new THREE.Vector3(g.x + 0.45, 0, g.z + 0.98 + 0.72 * i));
