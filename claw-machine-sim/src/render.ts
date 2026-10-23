@@ -13,25 +13,27 @@ export type CamPreset = 'god' | 'front';
 
 const GOD_FOV = 40;
 const FRONT_FOV = 40;
-const D_MIN = 5;
-const D_MAX = 72;
+const D_MIN = 3.2;
+const D_MAX = 46;
 
 /** 鏡頭:上帝視角(可拖曳平移、滾輪/雙指縮放、點選機台)與近看選取的機台 */
 export class Renderer {
   readonly renderer: THREE.WebGLRenderer;
   readonly scene = new THREE.Scene();
-  readonly camera = new THREE.PerspectiveCamera(GOD_FOV, 1, 0.1, 160);
+  readonly camera = new THREE.PerspectiveCamera(GOD_FOV, 1, 0.5, 130);
   /** 點選地面時呼叫(世界座標) */
-  onPick?: (p: THREE.Vector3) => void;
+  onPick?: (p: THREE.Vector3, clientX: number, clientY: number) => void;
+  /** 追蹤中的物件(上帝視角下鏡頭會跟著走) */
+  private following: THREE.Object3D | null = null;
   private composer: EffectComposer;
   private bloom: UnrealBloomPass;
   private preset: CamPreset = 'god';
   private focus = new THREE.Vector3();
   private inset = 0;
-  private godTarget = new THREE.Vector3(0, 0, 7);
-  private godDist = 52;
-  private curTarget = new THREE.Vector3(0, 0, 7);
-  private curDist = 52;
+  private godTarget = new THREE.Vector3(0, 0, 5);
+  private godDist = 32;
+  private curTarget = new THREE.Vector3(0, 0, 5);
+  private curDist = 32;
   private curPos = new THREE.Vector3();
   private curFov = GOD_FOV;
   private pointer = new THREE.Vector2();
@@ -55,7 +57,7 @@ export class Renderer {
     this.scene.fog = new THREE.FogExp2(0x0b0a12, 0.006);
     const pm = new THREE.PMREMGenerator(r);
     this.scene.environment = pm.fromScene(new RoomEnvironment(), 0.04).texture;
-    this.scene.environmentIntensity = 0.6;
+    this.scene.environmentIntensity = 0.42;
 
     const target = new THREE.WebGLRenderTarget(1, 1, { type: THREE.HalfFloatType, samples: isMobile ? 2 : 4 });
     this.composer = new EffectComposer(r, target);
@@ -78,10 +80,10 @@ export class Renderer {
   }
   /** 離鏡頭超過這個距離的人只畫簡化人形 */
   get lodDistance() {
-    return this.preset === 'god' ? 15 : 10;
+    return this.preset === 'god' ? 11 : 7;
   }
   get bubbleDistance() {
-    return this.preset === 'god' ? 30 : 40;
+    return this.preset === 'god' ? 22 : 25;
   }
   get godDistance() {
     return this.godDist;
@@ -98,6 +100,11 @@ export class Renderer {
 
   setPreset(p: CamPreset) {
     this.preset = p;
+  }
+
+  /** 鏡頭立即到位(不做平滑) */
+  snap() {
+    this.first = true;
   }
 
   /** 左側被面板蓋住的寬度(px):畫面內容會平移到剩餘空間置中 */
@@ -120,7 +127,7 @@ export class Renderer {
   }
 
   /** 上帝視角飛到某處並拉近 */
-  flyTo(x: number, z: number, dist = 13) {
+  flyTo(x: number, z: number, dist = 7) {
     this.preset = 'god';
     this.godTarget.set(x, 0, z);
     this.godDist = Math.min(this.godDist, dist);
@@ -128,12 +135,12 @@ export class Renderer {
 
   /** 上帝視角下,離視角中心最近的幾台機台(拉近時才回傳,供切換成近看細節) */
   nearbyMachineIndices(machines: Machine[], k: number): number[] {
-    if (this.preset !== 'god' || this.godDist > 14) return [];
+    if (this.preset !== 'god' || this.godDist > 8) return [];
     return machines
       .map((m) => ({ i: m.index, d: Math.hypot(m.x - this.curTarget.x, m.z - this.curTarget.z) }))
       .sort((a, b) => a.d - b.d)
       .slice(0, k)
-      .filter((o) => o.d < 6.5)
+      .filter((o) => o.d < 3.2)
       .map((o) => o.i);
   }
 
@@ -147,7 +154,19 @@ export class Renderer {
   }
 
   // ---------- 操作:拖曳平移、滾輪/雙指縮放、點選 ----------
+  setFollow(o: THREE.Object3D | null) {
+    this.following = o;
+    if (o) {
+      this.preset = 'god';
+      this.godDist = Math.min(this.godDist, 9);
+    }
+  }
+  get isFollowing() {
+    return this.following !== null;
+  }
+
   private panBy(dx: number, dy: number) {
+    this.following = null;
     const D = this.preset === 'god' ? this.godDist : 8;
     const pitch = this.pitchFor(D);
     const perPx = (2 * D * Math.tan(THREE.MathUtils.degToRad(GOD_FOV) / 2)) / innerHeight;
@@ -164,7 +183,7 @@ export class Renderer {
   }
   /** 離得越遠越接近俯視,拉近後越接近平視 */
   private pitchFor(D: number) {
-    return THREE.MathUtils.degToRad(THREE.MathUtils.lerp(26, 66, THREE.MathUtils.smoothstep(D, 5, 70)));
+    return THREE.MathUtils.degToRad(THREE.MathUtils.lerp(28, 64, THREE.MathUtils.smoothstep(D, 3, 44)));
   }
 
   private bindControls() {
@@ -203,7 +222,7 @@ export class Renderer {
       const had = pts.delete(e.pointerId);
       if (had && pts.size === 0 && moved < 6) {
         const g = this.pick(e.clientX, e.clientY);
-        if (g) this.onPick?.(g);
+        if (g) this.onPick?.(g, e.clientX, e.clientY);
       }
     };
     c.addEventListener('pointerup', end);
@@ -234,6 +253,10 @@ export class Renderer {
     let wantDist: number;
     let wantFov: number;
     let pitch: number;
+    if (this.following && this.preset === 'god') {
+      this.godTarget.x = this.following.position.x;
+      this.godTarget.z = this.following.position.z;
+    }
     if (this.preset === 'god') {
       wantTarget = this.godTarget;
       wantDist = this.godDist;
@@ -243,11 +266,11 @@ export class Renderer {
       // 近看:站在走道上方斜看選取的機台(後面一排機台比走道高,不能退太遠);直向螢幕自動拉遠
       const aspect = (innerWidth - this.inset) / innerHeight;
       const tanH = Math.tan(THREE.MathUtils.degToRad(FRONT_FOV) / 2);
-      const f = Math.max(1, 1.45 / (3.7 * tanH * aspect));
-      wantTarget = this.tmpB.set(this.focus.x + 0.1, 1.45, this.focus.z + 0.6);
-      wantDist = 3.7 * Math.min(f, 1.7);
+      const f = Math.max(1, 0.75 / (2.5 * tanH * aspect));
+      wantTarget = this.tmpB.set(this.focus.x, 1.15, this.focus.z + 0.35);
+      wantDist = 2.5 * Math.min(f, 1.8);
       wantFov = FRONT_FOV;
-      pitch = THREE.MathUtils.degToRad(38);
+      pitch = THREE.MathUtils.degToRad(32);
     }
     if (this.first) {
       this.curTarget.copy(wantTarget);

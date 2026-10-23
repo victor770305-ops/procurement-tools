@@ -52,8 +52,8 @@ async function main() {
       new THREE.PointsMaterial({ size: 0.07, map: sparkTex, color, transparent: true, blending: THREE.AdditiveBlending, depthWrite: false, toneMapped: false }),
     );
     pts.frustumCulled = false;
-    m.cabinet.group.add(pts);
-    sparkles.push({ host: m.cabinet.group, pts, vel, life: 1.4 });
+    m.cabinet.cage.add(pts);
+    sparkles.push({ host: m.cabinet.cage, pts, vel, life: 1.4 });
   };
 
   const game = new Game({
@@ -69,10 +69,12 @@ async function main() {
 
   // --- 選取機台 ---
   hud.onSelectMachine = (i) => game.focusMachine(i);
-  gfx.onPick = (p) => {
+  gfx.onPick = (p, cx, cy) => {
+    if (game.pickPerson(cx, cy)) return;
+    game.closeProfile();
     // 點地面:找最近的機台
     let best = -1;
-    let bd = 1.9;
+    let bd = 0.95;
     for (const m of game.machines) {
       const d = Math.hypot(m.x - p.x, m.z + 0.2 - p.z);
       if (d < bd) {
@@ -85,6 +87,11 @@ async function main() {
       game.select(best);
     }
   };
+  $('cashChip').addEventListener('click', () => game.openBoss());
+  $('btnJournal').addEventListener('click', () => {
+    sfx.click();
+    game.openJournal();
+  });
   $('btnPrev').addEventListener('click', () => {
     sfx.click();
     game.focusMachine((game.selected + N_MACHINES - 1) % N_MACHINES);
@@ -155,7 +162,7 @@ async function main() {
       hud.say(`近看 ${game.sel.name}`, 1200);
     } else {
       gfx.setPreset('god');
-      gfx.flyTo(game.sel.x, game.sel.z + 2, 30);
+      gfx.flyTo(game.sel.x, game.sel.z + 1.5, 18);
       hud.say('上帝視角(拖曳平移、滾輪縮放)', 1600);
     }
   });

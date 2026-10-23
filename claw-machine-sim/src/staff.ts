@@ -3,7 +3,8 @@ import type { Customer } from './customers';
 import { CAPACITY, StockItem } from './economy';
 import { EX_CAP, EX_LOW, Exchange } from './exchange';
 import type { Spill } from './events';
-import { Human, Pose } from './human';
+import { Character, STAFF_DEFS } from './characters';
+import { Human, Pose, humanOptsFromCharacter } from './human';
 import { IDLE_SPOTS, STAFF_DOOR, route, shelfSpot } from './layout';
 import { Machine, Prize, SERVICE_LABEL, ServiceKind } from './machine';
 
@@ -56,8 +57,13 @@ const SPEED = 1.75;
 const rnd = (a: number, b: number) => a + Math.random() * (b - a);
 const pick = <T,>(a: T[]) => a[Math.floor(Math.random() * a.length)];
 
+/** 各種工作主要看哪幾項能力(0 速度 1 細心 2 技術 3 親和 4 體力 5 抗壓) */
+const KIND_STAT: Record<TaskKind, number[]> = { restock: [0, 4], refill: [0, 4], assist: [3], retrieve: [1], fix: [2], mop: [1], clean: [1], fixEx: [2] };
+
 export class Staff {
   readonly human: Human;
+  readonly ch: Character;
+  readonly shift: number;
   task: Task | null = null;
   action = '待命';
   bubble = '';
@@ -68,29 +74,41 @@ export class Staff {
   waveT = 0;
   wavedAt = rnd(0, 6);
   done = 0;
+  /** 士氣 0~1:影響速度與工作耗時 */
+  morale = 0.7;
+  /** 訓練或事件帶來的能力加成 */
+  bonus = [0, 0, 0, 0, 0, 0];
+  /** 請假到第幾天(含) */
+  leaveUntil = 0;
   dest = new THREE.Vector3(1e9, 0, 1e9);
   path: THREE.Vector3[] = [];
   readonly reach = { l: new THREE.Vector3(), r: new THREE.Vector3() };
 
-  constructor(readonly name: string, readonly shift: number, look: { skin: number; hair: number; style: 'short' | 'long' | 'pony' | 'bun'; glasses?: boolean }) {
-    this.human = new Human({
-      skin: look.skin,
-      shirt: shift === 0 ? 0x24506b : 0x4b3a6b,
-      pants: 0x1f2433,
-      hair: look.hair,
-      scale: 1,
-      kid: false,
-      accessory: 'staff',
-      sleeve: 'short',
-      hairStyle: look.style,
-      glasses: look.glasses,
-      shoes: 0x1c1c22,
-    });
-    this.human.setBadge(shift === 0 ? 0x38d0ff : 0xff7ad0);
+  constructor(def: Character & { shift: 0 | 1 }) {
+    this.ch = def;
+    this.shift = def.shift;
+    this.human = new Human(humanOptsFromCharacter(def, 1, false));
+    this.human.setBadge(def.shift === 0 ? 0x38d0ff : 0xff7ad0);
     this.human.group.visible = false;
+  }
+  get name() {
+    return this.ch.name;
   }
   get pos() {
     return this.human.group.position;
+  }
+  stat(i: number) {
+    return Math.max(0, Math.min(100, this.ch.stats[i] + this.bonus[i]));
+  }
+  /** 走路速度倍率 */
+  get speedMul() {
+    return (0.8 + (0.4 * this.stat(0)) / 100) * (0.85 + 0.3 * this.morale);
+  }
+  /** 這類工作的耗時倍率(能力越高越快,士氣低會變慢) */
+  timeMul(kind: TaskKind) {
+    const ids = KIND_STAT[kind];
+    const avg = ids.reduce((sum, i) => sum + this.stat(i), 0) / ids.length;
+    return (1.35 - (0.7 * avg) / 100) / (0.85 + 0.3 * this.morale);
   }
   say(text: string, sec = 2) {
     this.bubble = text;
@@ -105,7 +123,7 @@ export interface StaffHooks {
   autoRestock(): boolean;
   wantFill(): boolean;
   nearbyCustomer(pos: THREE.Vector3, r: number): Customer | null;
-  assistDone(c: Customer): void;
+  assistDone(c: Customer, who: Staff): void;
   prizeRetrieved(m: Machine, c: Customer | undefined, prize: Prize | null): void;
   onRestock(m: Machine, n: number): void;
   onRefill(ex: Exchange): void;
@@ -116,17 +134,6 @@ export interface StaffHooks {
   log(text: string, kind: 'staff' | 'alert'): void;
 }
 
-const ROSTER: { shift: number; name: string; skin: number; hair: number; style: 'short' | 'long' | 'pony' | 'bun'; glasses?: boolean }[] = [
-  { shift: 0, name: '阿凱', skin: 0xe0ac86, hair: 0x1a1512, style: 'short' },
-  { shift: 0, name: '小雯', skin: 0xf1c9a5, hair: 0x6b4426, style: 'pony' },
-  { shift: 0, name: '小美', skin: 0xf1c9a5, hair: 0x3a2418, style: 'long' },
-  { shift: 0, name: '大偉', skin: 0xc68863, hair: 0x2a2a30, style: 'short', glasses: true },
-  { shift: 1, name: '小宇', skin: 0xf5d6bd, hair: 0x2a2a30, style: 'short' },
-  { shift: 1, name: '佩珊', skin: 0xe0ac86, hair: 0x1a1512, style: 'bun' },
-  { shift: 1, name: '志豪', skin: 0xc68863, hair: 0x1a1512, style: 'short', glasses: true },
-  { shift: 1, name: '雅婷', skin: 0xf1c9a5, hair: 0xb9873a, style: 'long' },
-];
-
 export class StaffManager {
   readonly staff: Staff[];
   readonly reqs = new Map<string, Req>();
@@ -135,8 +142,26 @@ export class StaffManager {
   private tmp = new THREE.Vector3();
 
   constructor(private scene: THREE.Object3D, private machines: Machine[], private exchanges: Exchange[], private spills: () => Spill[], private hooks: StaffHooks) {
-    this.staff = ROSTER.map((r) => new Staff(r.name, r.shift, r));
+    this.staff = STAFF_DEFS.map((d) => new Staff(d));
     for (const s of this.staff) scene.add(s.human.group);
+  }
+
+  /** 存檔用:各店員的士氣、能力加成與請假 */
+  snapshot() {
+    const out: Record<string, { morale: number; bonus: number[]; leaveUntil: number }> = {};
+    for (const s of this.staff) out[s.ch.id] = { morale: s.morale, bonus: s.bonus, leaveUntil: s.leaveUntil };
+    return out;
+  }
+  restore(map: Record<string, { morale: number; bonus: number[]; leaveUntil: number }> | undefined) {
+    if (!map) return;
+    for (const s of this.staff) {
+      const m = map[s.ch.id];
+      if (m) {
+        s.morale = m.morale;
+        s.bonus = m.bonus;
+        s.leaveUntil = m.leaveUntil;
+      }
+    }
   }
 
   get onDuty() {
@@ -148,8 +173,8 @@ export class StaffManager {
 
   // ---------- 輪班 ----------
   /** 設定目前的班別與人數。instant 為 true 時直接就位(開局用)。 */
-  setShift(shift: number, size: number, instant = false) {
-    const want = this.staff.filter((s) => s.shift === shift).slice(0, size);
+  setShift(shift: number, size: number, instant = false, day = 0) {
+    const want = this.staff.filter((s) => s.shift === shift && s.leaveUntil < day).slice(0, size);
     for (const s of this.staff) {
       const should = want.includes(s);
       if (should && !s.active) {
@@ -305,7 +330,7 @@ export class StaffManager {
       const dx = wp.x - s.pos.x;
       const dz = wp.z - s.pos.z;
       const d = Math.hypot(dx, dz);
-      const step = SPEED * dt;
+      const step = SPEED * s.speedMul * dt;
       if (d <= step) {
         s.pos.x = wp.x;
         s.pos.z = wp.z;
@@ -446,13 +471,13 @@ export class StaffManager {
           if (r.kind === 'restock' || r.kind === 'assist' || r.kind === 'retrieve' || r.kind === 'fix') m.service = r.kind as ServiceKind;
           const k = t.t;
           if (r.kind === 'clean') {
-            m.localToWorld(s.reach.l, -0.5 + Math.sin(k * 3.2) * 0.35, 0.9 + Math.sin(k * 1.7) * 0.25, 0.7);
-            m.localToWorld(s.reach.r, -0.3 + Math.sin(k * 3.2 + 1) * 0.35, 1.0 + Math.sin(k * 1.7) * 0.25, 0.7);
+            m.localToWorld(s.reach.l, -0.2 + Math.sin(k * 3.2) * 0.25, 1.25 + Math.sin(k * 1.7) * 0.18, 0.38);
+            m.localToWorld(s.reach.r, 0.0 + Math.sin(k * 3.2 + 1) * 0.25, 1.35 + Math.sin(k * 1.7) * 0.18, 0.38);
           } else {
-            m.localToWorld(s.reach.l, -0.6, 1.0 + Math.sin(k * 2.5) * 0.1, 0.55);
-            m.localToWorld(s.reach.r, -0.4, 0.95 + Math.sin(k * 2.5 + 1) * 0.1, 0.55);
+            m.localToWorld(s.reach.l, -0.22, 0.85 + Math.sin(k * 2.5) * 0.05, 0.4);
+            m.localToWorld(s.reach.r, -0.05, 0.8 + Math.sin(k * 2.5 + 1) * 0.05, 0.4);
           }
-          this.face(s, 0.35, -1, dt);
+          this.face(s, 0.5, -1, dt);
         } else if (r.ex) {
           s.reach.l.set(r.ex.x + 0.5, 1.1 + Math.sin(t.t * 3) * 0.05, r.ex.z + 0.3);
           s.reach.r.set(r.ex.x + 0.3, 1.0, r.ex.z + 0.35);
@@ -463,7 +488,7 @@ export class StaffManager {
           s.reach.r.set(r.spill.pos.x + Math.sin(k * 4 + 0.5) * 0.35, 0.1, r.spill.pos.z + 0.15);
           this.face(s, -0.8, -0.5, dt);
         }
-        if (t.t >= WORK_TIME[r.kind]) this.finish(s, t);
+        if (t.t >= WORK_TIME[r.kind] * s.timeMul(r.kind)) this.finish(s, t);
         break;
       }
     }
@@ -489,7 +514,7 @@ export class StaffManager {
         break;
       case 'assist':
         m!.assistNudge();
-        if (r.customer) this.hooks.assistDone(r.customer);
+        if (r.customer) this.hooks.assistDone(r.customer, s);
         this.hooks.log(`${s.name} 幫${r.customer?.label ?? '客人'}調整了${m!.name}的娃娃位置`, 'staff');
         s.say('這樣應該比較好夾囉!', 2);
         break;

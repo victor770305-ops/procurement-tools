@@ -1,12 +1,13 @@
 import * as THREE from 'three';
 import { BASE_PRICE } from './economy';
 import type { Exchange } from './exchange';
-import { Human, HumanOpts, Pose } from './human';
-import { DOOR_IN, DOOR_OUT, route } from './layout';
+import { ArchKind, Character, REGULARS, genCustomer } from './characters';
+import { Human, HumanOpts, Pose, humanOptsFromCharacter } from './human';
+import { DOOR_IN, DOOR_OUT, MAX_LINE, route } from './layout';
 import type { Machine, Prize } from './machine';
 import type { Spill } from './events';
 
-export type Kind = 'student' | 'couple' | 'pro' | 'kid';
+export type Kind = ArchKind;
 
 interface KindCfg {
   label: string;
@@ -28,11 +29,6 @@ export const KINDS: Record<Kind, KindCfg> = {
   pro: { label: '老手', weight: 0.2, plays: [4, 9], skill: 0.9, sens: 1.0, rare: 0.8, patience: 60, shirts: [0x2a313c, 0x3d4757, 0x5c3d2e, 0x394f3a], accessory: 'cap', scale: 1.03, kid: false },
   kid: { label: '小朋友', weight: 0.2, plays: [2, 4], skill: 0.2, sens: 0.6, rare: 0.1, patience: 100, shirts: [0xf2b93a, 0x5cb6e8, 0xf07a7a, 0x7bc88a], accessory: 'bow', scale: 0.72, kid: true },
 };
-
-const SKINS = [0xf1c9a5, 0xe0ac86, 0xc68863, 0x8d5a3b, 0xf5d6bd];
-const HAIRS = [0x1a1512, 0x3a2418, 0x6b4426, 0x2a2a30, 0xb9873a, 0x8a8a90];
-const PANTS = [0x2b3a55, 0x3b3b44, 0x4a5568, 0x1f2a3a, 0x5a4e3c, 0x23262e];
-const SHOES = [0x1c1c22, 0xf2f2f2, 0x6a3b24, 0x2d4a7a];
 
 export const MAX_COUNT = 150;
 
@@ -67,29 +63,32 @@ export class Customer {
   readonly slippedOn = new Set<Spill>();
   removed = false;
 
-  constructor(readonly kind: Kind) {
+  /** 個別能力(來自人物設定,真的會影響行為) */
+  readonly ch: Character;
+  readonly skill: number;
+  readonly patience: number;
+  readonly rare: number;
+  readonly luck: number;
+  readonly playsMul: number;
+  readonly kind: Kind;
+
+  constructor(kind: Kind, ch?: Character) {
+    this.kind = kind;
     this.cfg = KINDS[kind];
-    const long = Math.random() < 0.35;
-    this.human = new Human({
-      skin: pick(SKINS),
-      shirt: pick(this.cfg.shirts),
-      pants: pick(PANTS),
-      hair: pick(HAIRS),
-      scale: this.cfg.scale * rnd(0.97, 1.04),
-      kid: this.cfg.kid,
-      accessory: this.cfg.accessory,
-      sleeve: Math.random() < 0.55 ? 'short' : 'long',
-      hairStyle: this.cfg.kid ? pick(['pony', 'short', 'bun']) : long ? 'long' : pick(['short', 'short', 'pony', 'bun']),
-      glasses: !this.cfg.kid && Math.random() < 0.18,
-      shoes: pick(SHOES),
-      skirt: !this.cfg.kid && long && Math.random() < 0.3,
-    });
+    this.ch = ch ?? genCustomer(kind);
+    const st = this.ch.stats;
+    this.skill = THREE.MathUtils.clamp(st[0] / 100, 0.1, 0.98);
+    this.playsMul = 0.55 + (0.9 * st[1]) / 100;
+    this.patience = 40 + st[2] * 0.85;
+    this.luck = st[3] / 100;
+    this.rare = st[4] / 100;
+    this.human = new Human(humanOptsFromCharacter(this.ch, this.cfg.scale * rnd(0.97, 1.03), this.cfg.kid));
     this.human.group.position.copy(DOOR_OUT);
   }
 
   rollPlays(price: number) {
     const [lo, hi] = this.cfg.plays;
-    return Math.max(1, Math.round((lo + Math.random() * (hi - lo)) * Math.pow(BASE_PRICE / price, this.cfg.sens * 1.0)));
+    return Math.max(1, Math.round((lo + Math.random() * (hi - lo)) * this.playsMul * Math.pow(BASE_PRICE / price, this.cfg.sens * 1.0)));
   }
 
   say(text: string, sec = 2) {
@@ -100,7 +99,7 @@ export class Customer {
     return this.human.group.position;
   }
   get label() {
-    return this.cfg.label;
+    return this.ch.regular ? this.ch.name : this.cfg.label;
   }
 }
 
@@ -120,6 +119,7 @@ export interface ManagerHooks {
   spills(): Spill[];
   onSlip(c: Customer, s: Spill): void;
   jamChance(): number;
+  moodBonus(): number;
   onExchangeJam(ex: Exchange, c: Customer): void;
   onExchangeEmpty(ex: Exchange): void;
   onExchangeLow(ex: Exchange): void;
@@ -135,6 +135,8 @@ interface RoundInfo {
 
 export class CustomerManager {
   readonly all: Customer[] = [];
+  /** 劇情帶來的客流倍率 */
+  arrivalMul = 1;
   private spawnT = 3;
   private rounds = new Map<Machine, RoundInfo>();
   private readonly zero = { x: 0, z: 0 };
@@ -153,7 +155,7 @@ export class CustomerManager {
   /** 到店間隔(遊戲秒):機台越多越密;售價越高越久、聲望越高越短 */
   arrivalInterval(rep: number) {
     const price = this.hooks.price();
-    return (2.0 * Math.pow(price / BASE_PRICE, 1.1)) / (0.55 + 0.22 * rep);
+    return (2.0 * Math.pow(price / BASE_PRICE, 1.1)) / (0.55 + 0.22 * rep) / this.arrivalMul;
   }
 
   private chooseKind(): Kind {
@@ -168,16 +170,22 @@ export class CustomerManager {
 
   private spawn() {
     const price = this.hooks.price();
-    const kind = this.chooseKind();
+    // 一成機率是有名字的常客(當天還沒在店裡的才會來)
+    let regular: Character | undefined;
+    if (Math.random() < 0.12) {
+      const free = REGULARS.filter((r) => !this.all.some((c) => c.ch.id === r.id));
+      if (free.length) regular = free[Math.floor(Math.random() * free.length)];
+    }
+    const kind = regular?.kind ?? this.chooseKind();
     const cfg = KINDS[kind];
-    const enterProb = THREE.MathUtils.clamp(1.1 - 0.7 * cfg.sens * (price / BASE_PRICE - 1), 0.1, 1);
+    const enterProb = regular ? 1 : THREE.MathUtils.clamp(1.1 - 0.7 * cfg.sens * (price / BASE_PRICE - 1), 0.1, 1);
     if (Math.random() > enterProb) return;
     if (this.all.length >= MAX_COUNT || this.exchanges.every((e) => e.queue.length >= 6)) {
       this.hooks.onFull();
       return;
     }
-    const c = new Customer(kind);
-    c.mood += (this.hooks.cleanliness() - 0.5) * 0.3;
+    const c = new Customer(kind, regular);
+    c.mood += (this.hooks.cleanliness() - 0.5) * 0.3 + this.hooks.moodBonus();
     this.scene.add(c.human.group);
     this.all.push(c);
     this.joinExchange(c, this.pickExchange());
@@ -274,14 +282,14 @@ export class CustomerManager {
     let best: Machine | null = null;
     let bs = Infinity;
     for (const m of this.machines) {
-      if (m.fault || m.stock < 3 || m.line.length >= 5) continue;
+      if (m.fault || m.stock < 3 || m.line.length >= MAX_LINE) continue;
       let rare = 0;
-      if (c.cfg.rare > 0.3) {
+      if (c.rare > 0.3) {
         const n = m.mode === 'lite' ? m.items.length : m.stock;
         if (m.mode === 'lite' && n) rare = m.items.filter((i) => i.rarity !== 'common').length / n;
       }
       const dist = Math.hypot(m.x - c.pos.x, m.z - c.pos.z);
-      const s = m.line.length * 1.4 + dist * 0.07 + (m.blocked ? 2.5 : 0) - c.cfg.rare * rare * 1.5 + Math.random() * 1.2;
+      const s = m.line.length * 1.4 + dist * 0.07 + (m.blocked ? 2.5 : 0) - c.rare * rare * 1.5 + Math.random() * 1.2;
       if (s < bs) {
         bs = s;
         best = m;
@@ -353,7 +361,7 @@ export class CustomerManager {
     r.slipped = false;
     r.won = [];
     r.stuck = false;
-    m.beginRound(c.cfg.skill, c.cfg.rare);
+    m.beginRound(c.skill, c.rare, c.luck);
   }
 
   /** 一局結束,結算客人的反應 */
@@ -426,12 +434,12 @@ export class CustomerManager {
   }
 
   /** 店員協助 / 取出獎品完成 */
-  helped(c: Customer, ok: boolean) {
+  helped(c: Customer, ok: boolean, bonus = 0.35) {
     c.needsHelp = null;
     c.askedHelp = true;
     c.cool = 0.6;
     if (ok) {
-      c.mood = Math.min(1, c.mood + 0.35);
+      c.mood = Math.min(1, c.mood + bonus);
       c.cheer = 1.4;
       c.say('謝謝店員!😊', 2.2);
     }
@@ -478,7 +486,7 @@ export class CustomerManager {
   pilotInput(m: Machine, dt: number) {
     const c = m.line[0];
     if (!m.roundActive || !c || m.mode !== 'full') return this.zero;
-    return m.pilotInput(dt, c.cfg.skill);
+    return m.pilotInput(dt, c.skill);
   }
 
   update(dt: number, rep: number) {
@@ -510,7 +518,7 @@ export class CustomerManager {
         }
       }
       for (const c of [...ex.queue]) {
-        if (c.state === 'exchange' && c.wait > c.cfg.patience * 0.7) {
+        if (c.state === 'exchange' && c.wait > c.patience * 0.7) {
           c.say('等太久了😒', 2.5);
           this.leave(c, 'impatient');
         }
@@ -525,7 +533,7 @@ export class CustomerManager {
         this.goTo(c, m.station(i));
         if (i > 0) {
           c.wait += dt;
-          if (c.wait > c.cfg.patience) {
+          if (c.wait > c.patience) {
             c.say('等太久了😒', 2.5);
             this.leave(c, 'impatient');
           }

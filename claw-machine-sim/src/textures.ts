@@ -350,3 +350,205 @@ export function posterTexture(title: string, sub: string, hue: number) {
   g.strokeRect(8, 8, 240, 368);
   return tex(c);
 }
+
+// ---------- 台灣標準機型的卡通印花櫃身 ----------
+function drawBear(g: CanvasRenderingContext2D, cx: number, cy: number, s: number, fur: string, belly: string) {
+  g.fillStyle = fur;
+  for (const dx of [-0.62, 0.62]) {
+    g.beginPath();
+    g.arc(cx + dx * s, cy - 0.7 * s, 0.32 * s, 0, Math.PI * 2);
+    g.fill();
+  }
+  g.beginPath();
+  g.arc(cx, cy, s, 0, Math.PI * 2);
+  g.fill();
+  g.fillStyle = belly;
+  g.beginPath();
+  g.ellipse(cx, cy + 0.3 * s, 0.5 * s, 0.38 * s, 0, 0, Math.PI * 2);
+  g.fill();
+  g.fillStyle = '#2b1d1a';
+  for (const dx of [-0.36, 0.36]) {
+    g.beginPath();
+    g.arc(cx + dx * s, cy - 0.15 * s, 0.1 * s, 0, Math.PI * 2);
+    g.fill();
+  }
+  g.beginPath();
+  g.ellipse(cx, cy + 0.12 * s, 0.14 * s, 0.1 * s, 0, 0, Math.PI * 2);
+  g.fill();
+  g.strokeStyle = '#2b1d1a';
+  g.lineWidth = 0.05 * s;
+  g.beginPath();
+  g.arc(cx, cy + 0.22 * s, 0.2 * s, 0.15 * Math.PI, 0.85 * Math.PI);
+  g.stroke();
+}
+
+function drawBee(g: CanvasRenderingContext2D, cx: number, cy: number, s: number) {
+  g.fillStyle = 'rgba(255,255,255,0.8)';
+  for (const dx of [-0.7, 0.7]) {
+    g.beginPath();
+    g.ellipse(cx + dx * s, cy - 0.7 * s, 0.5 * s, 0.32 * s, dx * 0.5, 0, Math.PI * 2);
+    g.fill();
+  }
+  g.fillStyle = '#ffd23f';
+  g.beginPath();
+  g.ellipse(cx, cy, 0.85 * s, 0.75 * s, 0, 0, Math.PI * 2);
+  g.fill();
+  g.fillStyle = '#2b1d1a';
+  for (const y of [-0.05, 0.4]) g.fillRect(cx - 0.8 * s, cy + y * s, 1.6 * s, 0.17 * s);
+  g.fillStyle = '#fff';
+  for (const dx of [-0.3, 0.3]) {
+    g.beginPath();
+    g.arc(cx + dx * s, cy - 0.35 * s, 0.17 * s, 0, Math.PI * 2);
+    g.fill();
+  }
+  g.fillStyle = '#2b1d1a';
+  for (const dx of [-0.3, 0.3]) {
+    g.beginPath();
+    g.arc(cx + dx * s, cy - 0.33 * s, 0.07 * s, 0, Math.PI * 2);
+    g.fill();
+  }
+}
+
+function drawBunny(g: CanvasRenderingContext2D, cx: number, cy: number, s: number) {
+  g.fillStyle = '#fdf6f8';
+  for (const dx of [-0.38, 0.38]) {
+    g.beginPath();
+    g.ellipse(cx + dx * s, cy - 1.15 * s, 0.22 * s, 0.7 * s, dx * 0.25, 0, Math.PI * 2);
+    g.fill();
+  }
+  g.fillStyle = '#f7b9cc';
+  for (const dx of [-0.38, 0.38]) {
+    g.beginPath();
+    g.ellipse(cx + dx * s, cy - 1.12 * s, 0.1 * s, 0.5 * s, dx * 0.25, 0, Math.PI * 2);
+    g.fill();
+  }
+  g.fillStyle = '#fdf6f8';
+  g.beginPath();
+  g.arc(cx, cy, 0.9 * s, 0, Math.PI * 2);
+  g.fill();
+  g.fillStyle = '#2b1d1a';
+  for (const dx of [-0.33, 0.33]) {
+    g.beginPath();
+    g.arc(cx + dx * s, cy - 0.1 * s, 0.09 * s, 0, Math.PI * 2);
+    g.fill();
+  }
+  g.fillStyle = '#f48fb1';
+  g.beginPath();
+  g.arc(cx, cy + 0.12 * s, 0.09 * s, 0, Math.PI * 2);
+  g.fill();
+}
+
+function drawCat(g: CanvasRenderingContext2D, cx: number, cy: number, s: number) {
+  g.fillStyle = '#9db4d8';
+  for (const dx of [-0.6, 0.6]) {
+    g.beginPath();
+    g.moveTo(cx + dx * s, cy - 0.95 * s);
+    g.lineTo(cx + dx * 1.3 * s, cy - 0.2 * s);
+    g.lineTo(cx + dx * 0.2 * s, cy - 0.5 * s);
+    g.closePath();
+    g.fill();
+  }
+  g.beginPath();
+  g.arc(cx, cy, 0.95 * s, 0, Math.PI * 2);
+  g.fill();
+  g.fillStyle = '#2b1d1a';
+  for (const dx of [-0.35, 0.35]) {
+    g.beginPath();
+    g.ellipse(cx + dx * s, cy - 0.1 * s, 0.09 * s, 0.14 * s, 0, 0, Math.PI * 2);
+    g.fill();
+  }
+  g.strokeStyle = '#2b1d1a';
+  g.lineWidth = 0.035 * s;
+  for (const dx of [-1, 1]) for (const dy of [0, 0.12]) {
+    g.beginPath();
+    g.moveTo(cx + dx * 0.4 * s, cy + (0.2 + dy) * s);
+    g.lineTo(cx + dx * 1.1 * s, cy + (0.15 + dy * 2) * s);
+    g.stroke();
+  }
+}
+
+/** 櫃身印花:氣球、星星、彩帶與吉祥物 */
+function make_panelTexture(hue: number, mascot: number) {
+  const { c, g } = canvas(512, 512);
+  const bg = g.createLinearGradient(0, 0, 512, 512);
+  bg.addColorStop(0, `hsl(${hue} 85% 62%)`);
+  bg.addColorStop(1, `hsl(${(hue + 35) % 360} 90% 76%)`);
+  g.fillStyle = bg;
+  g.fillRect(0, 0, 512, 512);
+  // 放射線條
+  g.save();
+  g.translate(256, 300);
+  for (let i = 0; i < 18; i++) {
+    g.rotate((Math.PI * 2) / 18);
+    g.fillStyle = 'rgba(255,255,255,0.1)';
+    g.beginPath();
+    g.moveTo(0, 0);
+    g.lineTo(520, -26);
+    g.lineTo(520, 26);
+    g.closePath();
+    g.fill();
+  }
+  g.restore();
+  // 氣球
+  const balloon = ['#ff4f6d', '#4fa8ff', '#ffd23f', '#58d68d', '#b57bff', '#ff9a3c'];
+  for (let i = 0; i < 9; i++) {
+    const x = rnd(30, 482);
+    const y = rnd(30, 250);
+    const r = rnd(24, 44);
+    g.strokeStyle = 'rgba(60,40,40,0.5)';
+    g.lineWidth = 2;
+    g.beginPath();
+    g.moveTo(x, y + r);
+    g.quadraticCurveTo(x + rnd(-14, 14), y + r + 40, x + rnd(-10, 10), y + r + 78);
+    g.stroke();
+    g.fillStyle = balloon[i % balloon.length];
+    g.beginPath();
+    g.ellipse(x, y, r * 0.86, r, 0, 0, Math.PI * 2);
+    g.fill();
+    g.fillStyle = 'rgba(255,255,255,0.55)';
+    g.beginPath();
+    g.ellipse(x - r * 0.3, y - r * 0.35, r * 0.18, r * 0.3, -0.5, 0, Math.PI * 2);
+    g.fill();
+  }
+  // 星星與彩點
+  for (let i = 0; i < 26; i++) {
+    g.fillStyle = `rgba(255,255,255,${rnd(0.5, 0.95)})`;
+    const x = rnd(0, 512);
+    const y = rnd(0, 512);
+    const s = rnd(3, 9);
+    g.beginPath();
+    for (let k = 0; k < 10; k++) {
+      const a = (k / 10) * Math.PI * 2;
+      const rr = k % 2 ? s * 0.45 : s;
+      g.lineTo(x + Math.cos(a) * rr, y + Math.sin(a) * rr);
+    }
+    g.closePath();
+    g.fill();
+  }
+  // 吉祥物
+  const m = mascot % 4;
+  if (m === 0) drawBear(g, 256, 330, 110, '#b9794a', '#e8c9a0');
+  else if (m === 1) drawBee(g, 256, 330, 118);
+  else if (m === 2) drawBunny(g, 256, 340, 112);
+  else drawCat(g, 256, 335, 112);
+  return tex(c);
+}
+
+/** 夾物區地板的粉紅絨布 */
+function make_feltTexture() {
+  const { c, g } = canvas(256, 256);
+  g.fillStyle = '#f4a9c4';
+  g.fillRect(0, 0, 256, 256);
+  for (let i = 0; i < 5000; i++) {
+    const v = Math.floor(rnd(205, 255));
+    g.fillStyle = `rgba(${v},${Math.floor(v * 0.66)},${Math.floor(v * 0.78)},${rnd(0.15, 0.5)})`;
+    g.fillRect(rnd(0, 256), rnd(0, 256), 2, 2);
+  }
+  const t = tex(c);
+  t.wrapS = t.wrapT = THREE.RepeatWrapping;
+  t.repeat.set(3, 3);
+  return t;
+}
+
+export const panelTexture = (hue: number, mascot: number) => cached(`panel:${hue}:${mascot}`, () => make_panelTexture(hue, mascot));
+export const feltTexture = () => cached('felt', make_feltTexture);

@@ -1,7 +1,7 @@
 import * as THREE from 'three';
 import { Cabinet } from './cabinet';
 import { ClawRig } from './claw';
-import { BASE_HEIGHT, CLAW, DROP_POINT, Rarity } from './config';
+import { CLAW, DROP_POINT, Rarity } from './config';
 import type { Customer } from './customers';
 import { PLUSH_COST, StockItem } from './economy';
 import { Grid, MachineTheme, machineStation, serviceSpot } from './layout';
@@ -155,9 +155,9 @@ export class Machine {
     this.g = g;
     this.theme = theme;
     this.items = items;
-    // 操作台上搖桿與按鈕的世界座標
-    this.handL = new THREE.Vector3(g.x + 0.3, 1.04, g.z + 0.97);
-    this.handR = new THREE.Vector3(g.x + 0.62, 0.88, g.z + 0.92);
+    // 投幣箱上搖桿與按鈕的世界座標
+    this.handL = new THREE.Vector3(g.x + 0.07, 0.86, g.z + 0.47);
+    this.handR = new THREE.Vector3(g.x + 0.22, 0.86, g.z + 0.47);
   }
 
   get x() {
@@ -186,7 +186,7 @@ export class Machine {
     return serviceSpot(this.g);
   }
   localToWorld(out: THREE.Vector3, x: number, y: number, z: number) {
-    return out.set(this.g.x + x, BASE_HEIGHT + y, this.g.z + z);
+    return out.set(this.g.x + x, y, this.g.z + z);
   }
 
   /** 可以安全切換細節層 */
@@ -201,15 +201,15 @@ export class Machine {
     if (this.mode === 'full') return;
     this.pendingSwap = false;
     const cabinet = new Cabinet(this.shadowSize, this.theme);
-    cabinet.group.position.set(this.g.x, BASE_HEIGHT, this.g.z);
+    cabinet.group.position.set(this.g.x, 0, this.g.z);
     this.scene.add(cabinet.group);
     const physics = new Physics();
     physics.fillItems(this.items);
-    for (const p of physics.plushes) cabinet.group.add(p.mesh);
+    for (const p of physics.plushes) cabinet.cage.add(p.mesh);
     physics.syncMeshes();
     const claw = new ClawRig(physics);
     claw.strength = this.strength;
-    cabinet.group.add(claw.group);
+    cabinet.cage.add(claw.group);
     claw.events.onGrab = () => this.events.onGrab();
     claw.events.onSlip = () => this.events.onSlip();
     claw.events.onState = (s) => {
@@ -225,7 +225,7 @@ export class Machine {
     this.mode = 'full';
     if (this.stuck) {
       const e = physics.spawnPlush(0, 0.3, 0, this.stuck.type, this.stuck.rarity);
-      cabinet.group.add(e.mesh);
+      cabinet.cage.add(e.mesh);
       physics.makeStuck(e);
       this.stuckEntity = e;
     }
@@ -235,7 +235,7 @@ export class Machine {
   demote() {
     if (this.mode === 'lite') return;
     this.items = this.physics!.stockItems();
-    for (const p of this.physics!.plushes) this.cabinet!.group.remove(p.mesh);
+    for (const p of this.physics!.plushes) this.cabinet!.cage.remove(p.mesh);
     this.scene.remove(this.cabinet!.group);
     this.cabinet!.dispose();
     this.physics!.dispose();
@@ -247,17 +247,18 @@ export class Machine {
   }
 
   // ---------- 一局 ----------
-  beginRound(skill: number, rare: number) {
+  beginRound(skill: number, rare: number, luck = 0.5) {
     this.roundActive = true;
     this.plays++;
+    const luckMul = 0.92 + 0.16 * luck;
     if (this.mode === 'full') {
-      this.claw!.strength = this.strength;
+      this.claw!.strength = this.strength * luckMul;
       this.claw!.begin();
       this.pilot.start(skill, rare, this.physics!);
       return;
     }
     // 與近看層實測的成功率曲線一致:30%→約 25%、50%→約 40%、80%→約 60%
-    const pWin = Math.min(0.9, 0.75 * Math.pow(this.strength, 0.9) * (0.8 + 0.4 * skill));
+    const pWin = Math.min(0.9, 0.75 * Math.pow(this.strength, 0.9) * (0.8 + 0.4 * skill) * luckMul);
     const win = this.items.length > 0 && Math.random() < pWin;
     const grabbed = win || Math.random() < 0.62;
     this.lr = {
@@ -348,7 +349,7 @@ export class Machine {
     }
     for (const p of [...physics.plushes]) {
       if (p.won && simTime - p.wonAt > 1.2) {
-        cabinet.group.remove(p.mesh);
+        cabinet.cage.remove(p.mesh);
         physics.remove(p);
       }
     }
@@ -357,7 +358,7 @@ export class Machine {
   // ---------- 員工與事件 ----------
   addItems(items: StockItem[]) {
     if (this.mode === 'full') {
-      for (const p of this.physics!.dropIn(items)) this.cabinet!.group.add(p.mesh);
+      for (const p of this.physics!.dropIn(items)) this.cabinet!.cage.add(p.mesh);
     } else this.items.push(...items);
   }
 
@@ -376,7 +377,7 @@ export class Machine {
     const p = this.stuck;
     this.stuck = null;
     if (this.stuckEntity && this.mode === 'full') {
-      this.cabinet!.group.remove(this.stuckEntity.mesh);
+      this.cabinet!.cage.remove(this.stuckEntity.mesh);
       this.physics!.remove(this.stuckEntity);
     }
     this.stuckEntity = null;

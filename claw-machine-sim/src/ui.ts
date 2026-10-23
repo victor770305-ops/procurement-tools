@@ -1,9 +1,34 @@
 import * as THREE from 'three';
+import type { Character } from './characters';
 import { PACKS, Pack } from './economy';
+import { Expression, portrait } from './portrait';
 import type { Marker } from './game';
 
 const $ = <T extends HTMLElement>(id: string) => document.getElementById(id) as T;
 const fmt = (n: number) => Math.round(n).toLocaleString('en-US');
+
+export interface ProfileView {
+  ch: Character;
+  /** 目前顯示的六項能力(含加成) */
+  stats: number[];
+  expr: Expression;
+  roleLabel: string;
+  meta: string;
+  status: string;
+  lines: [string, string][];
+  /** 心情或士氣 0~1 */
+  mood?: number;
+  moodLabel?: string;
+}
+
+export interface StoryView {
+  icon: string;
+  tag: string;
+  title: string;
+  paragraphs: string[];
+  cast: Character[];
+  choices: { label: string; hint: string }[];
+}
 
 export type UiPhase = 'prep' | 'open' | 'closing' | 'report';
 
@@ -19,10 +44,11 @@ export interface OpsSnapshot {
   summary: { running: number; waiting: number; fault: number; empty: number; stuck: number; service: number; idle: number; customers: number };
   selected: { name: string; status: string; stock: number; queue: number; plays: number; wins: number; dirt: number; detail: string };
   problems: { text: string; who: string; pri: number; machine?: number }[];
-  staff: { name: string; action: string; done: number }[];
+  staff: { name: string; title: string; action: string; done: number }[];
   shift: string;
   exchanges: { name: string; state: string; coins: number; queue: number }[];
   warehouse: number;
+  mods?: { label: string; days: number }[];
   feed: { time: string; text: string; kind: string }[];
 }
 
@@ -35,6 +61,9 @@ export class Hud {
   private opsT = 0;
   private feedSeen = -1;
   onSelectMachine?: (i: number) => void;
+  onSelectStaff?: (i: number) => void;
+  private profKey = '';
+  private profHandlers?: { onClose: () => void; onFollow: () => void };
 
   readonly el = {
     hud: $('hud'),
@@ -42,6 +71,9 @@ export class Hud {
     controls: $('controls'),
     settings: $('settings'),
     ops: $('ops'),
+    profile: $('profile'),
+    story: $('story'),
+    journal: $('journal'),
     shop: $('shop'),
     report: $('report'),
   };
@@ -194,6 +226,7 @@ export class Hud {
       ['場內客人', s.summary.customers, ''],
     ];
     $('opsSummary').innerHTML = tiles.map(([k, v, c]) => `<div class="tile ${c}"><b>${v}</b><span>${k}</span></div>`).join('');
+    $('opsMods').innerHTML = (s.mods ?? []).map((x) => `<span>${x.label}(剩 ${x.days} 天)</span>`).join('');
     const m = s.selected;
     $('opsSel').innerHTML = `<div class="selrow"><b>${m.name}</b><span class="pill">${m.status}</span></div>
       <div class="meta"><span>庫存 ${m.stock}/24</span><div class="bar2 ${m.stock <= 5 ? 'low' : ''}"><i style="width:${Math.min(100, (m.stock / 24) * 100)}%"></i></div><span>排隊 ${m.queue}</span></div>
@@ -206,7 +239,11 @@ export class Hud {
     $('opsProblems').querySelectorAll<HTMLElement>('.prow').forEach((el) => {
       el.onclick = () => el.dataset.m && this.onSelectMachine?.(Number(el.dataset.m));
     });
-    $('opsStaff').innerHTML = s.staff.map((t) => `<div class="srow"><span><b>${t.name}</b></span><span>${t.action}</span></div>`).join('') || '<div class="empty">目前沒有店員在班</div>';
+    $('opsStaff').innerHTML =
+      s.staff.map((t, i) => `<div class="srow" data-i="${i}"><span><b>${t.name}</b> · ${t.title}</span><span>${t.action}</span></div>`).join('') || '<div class="empty">目前沒有店員在班</div>';
+    $('opsStaff').querySelectorAll<HTMLElement>('.srow').forEach((el) => {
+      el.onclick = () => this.onSelectStaff?.(Number(el.dataset.i));
+    });
     $('opsEx').innerHTML = s.exchanges
       .map((e) => `<div class="srow"><span><b>${e.name}</b> · 排隊 ${e.queue}</span><span class="${e.state !== 'ok' ? 'bad' : ''}">${e.state === 'ok' ? '正常' : e.state === 'jam' ? '卡鈔' : '缺零錢'} · 零錢 ${e.coins}</span></div>`)
       .join('');
@@ -272,6 +309,113 @@ export class Hud {
       this.el.report.hidden = true;
       onNext();
     };
+  }
+
+  // ---------- 人物卡 ----------
+  private radar(labels: string[], values: number[], color: string) {
+    const cx = 135;
+    const cy = 112;
+    const R = 78;
+    const pt = (i: number, r: number) => {
+      const a = -Math.PI / 2 + (i * Math.PI * 2) / 6;
+      return [cx + Math.cos(a) * r, cy + Math.sin(a) * r];
+    };
+    const ring = (f: number) => labels.map((_, i) => pt(i, R * f).join(',')).join(' ');
+    const poly = values.map((v, i) => pt(i, (R * Math.max(4, Math.min(100, v))) / 100).join(',')).join(' ');
+    const axes = labels.map((_, i) => `<line x1="${cx}" y1="${cy}" x2="${pt(i, R)[0]}" y2="${pt(i, R)[1]}" stroke="rgba(255,255,255,0.18)"/>`).join('');
+    const rings = [0.25, 0.5, 0.75, 1].map((f) => `<polygon points="${ring(f)}" fill="none" stroke="rgba(255,255,255,${f === 1 ? 0.35 : 0.14})"/>`).join('');
+    const dots = values.map((v, i) => `<circle cx="${pt(i, (R * Math.max(4, Math.min(100, v))) / 100)[0]}" cy="${pt(i, (R * Math.max(4, Math.min(100, v))) / 100)[1]}" r="3.5" fill="${color}"/>`).join('');
+    const text = labels
+      .map((l, i) => {
+        const [x, y] = pt(i, R + 20);
+        return `<text x="${x}" y="${y - 2}" text-anchor="middle" font-size="12" font-weight="700" fill="#f4f1ff">${l}</text><text x="${x}" y="${y + 12}" text-anchor="middle" font-size="12" fill="${color}" font-weight="800">${Math.round(values[i])}</text>`;
+      })
+      .join('');
+    return `<svg viewBox="0 0 270 230">${rings}${axes}<polygon points="${poly}" fill="${color}" fill-opacity="0.32" stroke="${color}" stroke-width="2.5" stroke-linejoin="round"/>${dots}${text}</svg>`;
+  }
+
+  showProfile(v: ProfileView, handlers: { onClose: () => void; onFollow: () => void }) {
+    this.profHandlers = handlers;
+    this.profKey = '';
+    this.el.profile.hidden = false;
+    const color = `#${v.ch.accent.toString(16).padStart(6, '0')}`;
+    ($('profImg') as HTMLImageElement).src = portrait(v.ch, v.expr, 192);
+    ($('profImg') as HTMLElement).style.borderColor = color;
+    $('profName').textContent = v.ch.name;
+    const role = $('profRole');
+    role.textContent = v.roleLabel;
+    role.style.background = color;
+    $('profTitle').textContent = v.ch.title;
+    $('profMeta').textContent = v.meta;
+    $('profBio').textContent = v.ch.bio;
+    $('profQuirks').innerHTML = v.ch.quirks.map((q) => `<span>${q}</span>`).join('');
+    ($('profClose') as HTMLElement).onclick = () => handlers.onClose();
+    ($('profFollow') as HTMLElement).onclick = () => handlers.onFollow();
+    this.updateProfile(v);
+  }
+
+  updateProfile(v: ProfileView) {
+    if (this.el.profile.hidden) return;
+    const color = `#${v.ch.accent.toString(16).padStart(6, '0')}`;
+    const key = `${v.expr}|${v.stats.join(',')}`;
+    if (key !== this.profKey) {
+      this.profKey = key;
+      ($('profImg') as HTMLImageElement).src = portrait(v.ch, v.expr, 192);
+      $('profRadar').innerHTML = this.radar(v.ch.statNames, v.stats, color);
+    }
+    const mood =
+      v.mood === undefined
+        ? ''
+        : `<div class="row2"><span>${v.moodLabel ?? '心情'}</span><b>${Math.round(v.mood * 100)}%</b></div><div class="moodbar"><i style="width:${Math.round(Math.max(0, Math.min(1, v.mood)) * 100)}%"></i></div>`;
+    $('profLive').innerHTML =
+      `<div class="row2"><span>目前狀態</span><b>${v.status}</b></div>` + mood + v.lines.map(([k, val]) => `<div class="row2"><span>${k}</span><b>${val}</b></div>`).join('');
+  }
+
+  hideProfile() {
+    this.el.profile.hidden = true;
+  }
+  setFollowing(on: boolean) {
+    ($('profFollow') as HTMLElement).textContent = on ? '✓ 追蹤中(再按取消)' : '👁 追蹤這個人';
+  }
+
+  // ---------- 劇情卡 ----------
+  showStory(v: StoryView, onChoose: (i: number) => void) {
+    this.el.story.hidden = false;
+    $('storyCast').innerHTML = v.cast.map((c) => `<figure><img src="${portrait(c, 'neutral', 148)}" alt=""/>${c.name}</figure>`).join('');
+    $('storyTag').textContent = `${v.icon} ${v.tag}`;
+    $('storyTitle').textContent = v.title;
+    $('storyBody').innerHTML = v.paragraphs.map((p) => `<p class="para">${p}</p>`).join('');
+    $('storyEffects').innerHTML = '';
+    ($('storyFoot') as HTMLElement).hidden = true;
+    const box = $('storyChoices');
+    box.innerHTML = '';
+    v.choices.forEach((c, i) => {
+      const b = document.createElement('button');
+      b.className = 'choice';
+      b.innerHTML = `<b>${c.label}</b><span>${c.hint}</span>`;
+      b.onclick = () => onChoose(i);
+      box.appendChild(b);
+    });
+  }
+
+  showOutcome(text: string, effects: { text: string; kind: 'good' | 'bad' | '' }[], onDone: () => void) {
+    $('storyChoices').innerHTML = '';
+    $('storyBody').insertAdjacentHTML('beforeend', `<p class="para" style="border-top:1px solid var(--line);padding-top:10px;margin-top:10px">${text}</p>`);
+    $('storyEffects').innerHTML = effects.map((e) => `<span class="${e.kind}">${e.text}</span>`).join('');
+    ($('storyFoot') as HTMLElement).hidden = false;
+    ($('storyDone') as HTMLElement).onclick = () => {
+      this.el.story.hidden = true;
+      onDone();
+    };
+  }
+
+  showJournal(entries: { day: number; icon: string; title: string; choice: string; outcome: string }[], mods: { label: string; days: number }[]) {
+    this.el.journal.hidden = false;
+    $('journalMods').innerHTML = mods.length ? `<div class="modsbar">${mods.map((m) => `<span>${m.label}(剩 ${m.days} 天)</span>`).join('')}</div>` : '';
+    $('journalBody').innerHTML = entries.length
+      ? [...entries].reverse().map((e) => `<div class="item"><small>第 ${e.day} 天</small><br><b>${e.icon} ${e.title}</b><br>你的決定:${e.choice}<br><small>${e.outcome}</small></div>`).join('')
+      : '<div class="empty">還沒有發生過任何事件。營運幾天之後,這裡會記錄你做過的決定。</div>';
+    ($('journalClose') as HTMLElement).onclick = () => (this.el.journal.hidden = true);
   }
 
   /** 重新開始需點兩次,避免誤觸 */

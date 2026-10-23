@@ -76,6 +76,39 @@ export const newStats = (): DayStats => ({
   spills: 0, slips: 0, faults: 0, stuck: 0, jams: 0,
 });
 
+/** 劇情選擇帶來的暫時店況加成(持續幾天) */
+export interface Modifier {
+  id: string;
+  label: string;
+  days: number;
+  /** 以下皆為倍率或加減值,未填表示不影響 */
+  arrival?: number;
+  spill?: number;
+  fault?: number;
+  jam?: number;
+  /** 全店爪力的加減(例如 +0.1) */
+  strength?: number;
+  /** 客人進門時的心情加成 */
+  mood?: number;
+  wage?: number;
+  rent?: number;
+}
+
+export interface StoryLogEntry {
+  day: number;
+  id: string;
+  title: string;
+  icon: string;
+  choice: string;
+  outcome: string;
+}
+
+export interface StaffSave {
+  morale: number;
+  bonus: number[];
+  leaveUntil: number;
+}
+
 export interface GameState {
   day: number;
   cash: number;
@@ -87,6 +120,14 @@ export interface GameState {
   totalProfit: number;
   /** 早班、晚班各幾位店員(3 或 4) */
   shiftSize: [number, number];
+  staff?: Record<string, StaffSave>;
+  regulars: Record<string, { visits: number }>;
+  flags: string[];
+  mods: Modifier[];
+  storyLog: StoryLogEntry[];
+  storyDay: Record<string, number>;
+  chains: { id: string; day: number }[];
+  last?: { revenue: number; profit: number; faults: number };
 }
 
 export const initialState = (): GameState => ({
@@ -99,6 +140,12 @@ export const initialState = (): GameState => ({
   warehouse: [],
   totalProfit: 0,
   shiftSize: [4, 3],
+  regulars: {},
+  flags: [],
+  mods: [],
+  storyLog: [],
+  storyDay: {},
+  chains: [],
 });
 
 const KEY = 'claw-club-save-v3';

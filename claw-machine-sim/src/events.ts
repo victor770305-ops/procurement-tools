@@ -22,10 +22,11 @@ export class Spill {
     const color = pick([0x3a1c10, 0xd88a2a, 0x7fb0e8, 0xc23b52]);
     const puddle = new THREE.Mesh(
       new THREE.CircleGeometry(this.radius, 28),
-      new THREE.MeshPhysicalMaterial({ color, roughness: 0.04, clearcoat: 1, clearcoatRoughness: 0.03, transparent: true, opacity: 0.86, depthWrite: false, polygonOffset: true, polygonOffsetFactor: -2 }),
+      new THREE.MeshPhysicalMaterial({ color, roughness: 0.04, clearcoat: 1, clearcoatRoughness: 0.03, transparent: true, opacity: 0.86, depthWrite: false, polygonOffset: true, polygonOffsetFactor: -3, polygonOffsetUnits: -3 }),
     );
     puddle.rotation.x = -Math.PI / 2;
-    puddle.position.y = 0.016;
+    puddle.position.y = 0.05;
+    puddle.renderOrder = 2;
     puddle.scale.set(1, 0.8 + Math.random() * 0.4, 1);
     puddle.rotation.z = Math.random() * 6;
     this.mesh.add(puddle);
@@ -94,9 +95,15 @@ export class EventDirector {
   jamChance = 0.008;
   /** 每次得獎卡在洞口的機率 */
   stuckChance = 0.02;
+  /** 劇情帶來的倍率 */
+  readonly mul = { spill: 1, fault: 1, jam: 1 };
   private acc = 0;
 
   constructor(private hooks: EventHooks) {}
+
+  get jam() {
+    return this.jamChance * this.mul.jam;
+  }
 
   update(dt: number) {
     if (!this.hooks.isOpen()) return;
@@ -105,8 +112,8 @@ export class EventDirector {
     const step = this.acc;
     this.acc = 0;
     const custs = this.hooks.customers().filter((c) => c.state !== 'leaving' && c.slipT <= 0 && c.cheer <= 0);
-    if (custs.length && Math.random() < this.spillRate * custs.length * step) this.hooks.spill(custs[Math.floor(Math.random() * custs.length)]);
-    if (Math.random() < this.faultRate * step) {
+    if (custs.length && Math.random() < this.spillRate * this.mul.spill * custs.length * step) this.hooks.spill(custs[Math.floor(Math.random() * custs.length)]);
+    if (Math.random() < this.faultRate * this.mul.fault * step) {
       const ms = this.hooks.machines().filter((m) => !m.fault && !m.service);
       // 正在玩的機台比較容易壞
       const busy = ms.filter((m) => m.roundActive || m.line.length);

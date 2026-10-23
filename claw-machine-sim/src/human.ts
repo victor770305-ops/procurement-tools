@@ -1,4 +1,5 @@
 import * as THREE from 'three';
+import type { Character, Look } from './characters';
 import { isMobile } from './render';
 
 export interface HumanOpts {
@@ -8,9 +9,9 @@ export interface HumanOpts {
   hair: number;
   scale: number;
   kid: boolean;
-  accessory: 'none' | 'backpack' | 'cap' | 'bow' | 'staff';
+  accessory: 'none' | 'backpack' | 'cap' | 'bow' | 'staff' | 'suit';
   sleeve?: 'short' | 'long';
-  hairStyle?: 'short' | 'long' | 'pony' | 'bun';
+  hairStyle?: 'short' | 'long' | 'pony' | 'bun' | 'curly' | 'bald';
   glasses?: boolean;
   shoes?: number;
   skirt?: boolean;
@@ -123,8 +124,11 @@ export class Human {
     }
     part(new THREE.SphereGeometry(0.018, 8, 6), skin, this.head, 0, -0.02, 0.118);
     const style = o.hairStyle ?? 'short';
-    const cap = part(new THREE.SphereGeometry(0.118, seg * 2, 10, 0, Math.PI * 2, 0, Math.PI * 0.58), hair, this.head, 0, 0.015, -0.012);
-    cap.rotation.x = -0.25;
+    if (style !== 'bald') {
+      const hc = part(new THREE.SphereGeometry(0.118, seg * 2, 10, 0, Math.PI * 2, 0, Math.PI * 0.58), hair, this.head, 0, 0.015, -0.012);
+      hc.rotation.x = -0.25;
+    }
+    if (style === 'curly') for (let i = 0; i < 7; i++) part(new THREE.SphereGeometry(0.04, 8, 6), hair, this.head, Math.cos(i * 0.9) * 0.085, 0.1 + Math.abs(Math.sin(i * 0.9)) * 0.02, Math.sin(i * 0.9) * 0.06 - 0.02);
     if (style === 'long') part(new THREE.CapsuleGeometry(0.1, 0.22, 4, seg), hair, this.head, 0, -0.1, -0.075).scale.set(1.05, 1, 0.55);
     else if (style === 'pony') part(new THREE.CapsuleGeometry(0.035, 0.16, 4, 8), hair, this.head, 0, -0.06, -0.15);
     else if (style === 'bun') part(new THREE.SphereGeometry(0.055, 8, 8), hair, this.head, 0, 0.12, -0.07);
@@ -150,6 +154,11 @@ export class Human {
       const c = part(new THREE.SphereGeometry(0.128, seg * 2, 10, 0, Math.PI * 2, 0, Math.PI * 0.5), cloth(0xd9467f), this.head, 0, 0.035, 0);
       c.rotation.x = -0.1;
       part(new THREE.BoxGeometry(0.16, 0.012, 0.11), cloth(0xd9467f), this.head, 0, 0.04, 0.12);
+    } else if (o.accessory === 'suit') {
+      // 西裝外套與領帶
+      part(new THREE.CapsuleGeometry(0.175, 0.34, 6, seg * 2), cloth(0x232a3c), this.upper, 0, 0.3, 0.005).scale.set(1.1, 1, 0.78);
+      part(new THREE.BoxGeometry(0.1, 0.34, 0.02), cloth(0xf2f2f2), this.upper, 0, 0.36, 0.135);
+      part(new THREE.BoxGeometry(0.035, 0.28, 0.015), cloth(0xb3262d), this.upper, 0, 0.34, 0.15);
     } else if (o.accessory === 'bow') {
       for (const s of [-1, 1]) part(new THREE.SphereGeometry(0.045, 10, 8), cloth(0xff5fa2), this.head, s * 0.105, 0.075, -0.01);
     }
@@ -186,10 +195,11 @@ export class Human {
   setBadge(color: number) {
     const ring = new THREE.Mesh(
       new THREE.RingGeometry(0.42, 0.56, 28),
-      new THREE.MeshBasicMaterial({ color: new THREE.Color(color).multiplyScalar(1.6), toneMapped: false, transparent: true, opacity: 0.9, depthWrite: false }),
+      new THREE.MeshBasicMaterial({ color: new THREE.Color(color).multiplyScalar(1.6), toneMapped: false, transparent: true, opacity: 0.9, depthWrite: false, polygonOffset: true, polygonOffsetFactor: -4, polygonOffsetUnits: -4 }),
     );
     ring.rotation.x = -Math.PI / 2;
-    ring.position.y = 0.025;
+    ring.position.y = 0.06;
+    ring.renderOrder = 2;
     this.group.add(ring);
   }
 
@@ -291,4 +301,34 @@ export class Human {
     this.rig.rotation.x = -this.fallT * 1.45;
     this.rig.position.y = this.fallT * 0.2;
   }
+}
+
+const PANTS = [0x2b3a55, 0x3b3b44, 0x4a5568, 0x1f2a3a, 0x5a4e3c, 0x23262e];
+const SHOES = [0x1c1c22, 0xf2f2f2, 0x6a3b24, 0x2d4a7a];
+const hash = (id: string) => [...id].reduce((a, c) => (a * 31 + c.charCodeAt(0)) >>> 0, 7);
+
+/** 由人物設定(Look)產生 3D 小人的外觀,讓 3D 與肖像長得一致 */
+export function humanOptsFromCharacter(ch: Character, scale: number, kid: boolean): HumanOpts {
+  const L: Look = ch.look;
+  const h = hash(ch.id);
+  let accessory: HumanOpts['accessory'] = 'none';
+  if (ch.role === 'staff') accessory = 'staff';
+  else if (ch.role === 'boss') accessory = 'suit';
+  else if (L.extra === 'cap') accessory = 'cap';
+  else if (L.extra === 'bow') accessory = 'bow';
+  else if (ch.kind === 'student') accessory = 'backpack';
+  return {
+    skin: L.skin,
+    shirt: L.shirt,
+    pants: ch.role === 'staff' ? 0x1f2433 : ch.role === 'boss' ? 0x1b2030 : PANTS[h % PANTS.length],
+    hair: L.hair,
+    scale,
+    kid,
+    accessory,
+    sleeve: L.outfit === 'tee' || L.outfit === 'dress' ? 'short' : L.outfit === 'uniform' ? 'short' : 'long',
+    hairStyle: L.hairStyle,
+    glasses: L.glasses,
+    shoes: SHOES[(h >> 3) % SHOES.length],
+    skirt: L.outfit === 'dress',
+  };
 }

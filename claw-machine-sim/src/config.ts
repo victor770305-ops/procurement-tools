@@ -26,7 +26,12 @@ export const DROP_POINT = { x: -0.53, z: 0.38 } as const;
 
 export const CHUTE_CENTER = { x: -0.535, z: 0.38 } as const;
 
-export const BASE_HEIGHT = 0.95; // 機台地板距店內地面高度
+/** 夾物區(物理、爪子、娃娃)整組縮小成這個比例,放進台灣標準機型的外殼裡 */
+export const CAGE_SCALE = 0.5;
+/** 夾物區地板距店內地面的高度(公尺) */
+export const PLAY_Y = 0.98;
+/** 機台外殼尺寸(公尺) */
+export const SHELL = { w: 0.89, d: 0.74 } as const;
 
 export type Rarity = 'common' | 'rare' | 'ssr';
 export const RARITY: Record<Rarity, { label: string; color: string; weight: number }> = {
