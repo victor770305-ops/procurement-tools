@@ -223,6 +223,35 @@ input,select{font:inherit;color:inherit}
 .lb.mine{background:#FFF1E8;border-radius:14px;padding:10px}
 .lb .pc{font-weight:900;color:var(--pri)}
 
+/* shared store space */
+.scene{position:relative;height:486px;border-radius:30px;overflow:hidden;margin-top:6px;box-shadow:var(--sh);background:linear-gradient(#FFEEDC,#FFE2C9)}
+.scene .sign{position:absolute;top:12px;left:50%;transform:translateX(-50%);z-index:8;background:linear-gradient(135deg,#FF8F70,#FF6FA0);color:#fff;border-radius:14px;padding:7px 16px;font-weight:900;font-size:14px;white-space:nowrap;box-shadow:0 6px 14px rgba(255,111,130,.35)}
+.machines{position:absolute;top:50px;left:0;right:0;display:flex;justify-content:center;gap:9px;padding:0 8px}
+.mc{width:52px;height:128px;flex:none;border-radius:16px 16px 6px 6px;background:var(--c);position:relative;box-shadow:inset 0 -12px 0 rgba(0,0,0,.08),0 4px 10px rgba(0,0,0,.06)}
+.mc:before{content:"";position:absolute;left:6px;right:6px;top:16px;height:64px;border-radius:9px;background:linear-gradient(160deg,rgba(255,255,255,.95),rgba(214,236,255,.8))}
+.mc:after{content:"";position:absolute;left:8px;right:8px;top:5px;height:6px;border-radius:6px;background:repeating-linear-gradient(90deg,#FFF6B0 0 6px,transparent 6px 10px);animation:bulb 1.2s infinite}
+.mc i{position:absolute;top:58px;width:13px;height:13px;border-radius:50%;z-index:1}
+.mc b{position:absolute;left:50%;bottom:18px;width:20px;height:13px;margin-left:-10px;background:rgba(0,0,0,.2);border-radius:4px}
+.scene .ground{position:absolute;left:0;right:0;bottom:0;height:290px;background:repeating-conic-gradient(#F5DFC7 0 25%,#FBEBDA 0 50%) 0 0/46px 46px;border-top:5px solid #E8C6A1}
+.stage{position:absolute;left:50%;bottom:74px;width:210px;height:48px;transform:translateX(-50%);border-radius:50%;background:radial-gradient(#FFF7CF,#FFDA8C 62%,#F3B95A);box-shadow:0 0 34px rgba(255,205,110,.85);z-index:2}
+.storepet{position:absolute;left:50%;bottom:82px;width:184px;height:184px;transform:translateX(-50%);z-index:4;cursor:pointer}
+.storepet svg{width:100%;height:100%;overflow:visible}
+.sp-tag{position:absolute;left:50%;bottom:40px;transform:translateX(-50%);z-index:7;background:#3A2E4A;color:#fff;font-size:12px;font-weight:900;border-radius:999px;padding:4px 12px;white-space:nowrap;box-shadow:0 4px 10px rgba(0,0,0,.15)}
+.sp-need{position:absolute;left:calc(50% + 50px);bottom:252px;z-index:7;background:#fff;border-radius:16px;padding:6px 10px;font-size:12px;font-weight:800;box-shadow:var(--sh);white-space:nowrap;animation:float 2s ease-in-out infinite}
+.sp-speech{position:absolute;left:50%;bottom:276px;z-index:9;transform:translateX(-50%) scale(.6);opacity:0;background:#fff;border-radius:16px;padding:8px 13px;font-size:13px;font-weight:800;box-shadow:var(--sh);white-space:nowrap;transition:.25s;pointer-events:none}
+.sp-speech.on{opacity:1;transform:translateX(-50%) scale(1)}
+.member{position:absolute;width:80px;text-align:center;cursor:pointer;animation:stroll var(--d,6s) ease-in-out infinite alternate}
+@keyframes stroll{from{transform:translateX(calc(var(--w,14px) * -1))}to{transform:translateX(var(--w,14px))}}
+.member .p{width:70px;height:70px;margin:0 auto}
+.member .p svg{width:100%;height:100%;overflow:visible}
+.member .n{font-size:11px;font-weight:900;background:rgba(255,255,255,.95);display:inline-block;padding:2px 8px;border-radius:999px;margin-top:-6px;box-shadow:0 2px 6px rgba(0,0,0,.08);white-space:nowrap}
+.member .s{font-size:10px;font-weight:800;color:#8A6A4A;margin-top:2px}
+.member.me .n{background:var(--pri);color:#fff}
+.scene .fx{bottom:220px}
+.sp-card .hd{display:flex;align-items:center;gap:12px}
+.sp-card .mini{width:64px;height:64px;flex:none}
+.sp-card .mini svg{width:100%;height:100%;overflow:visible}
+
 /* claw machine */
 .cm{background:linear-gradient(160deg,#FF8F70,#FF6FA0);border-radius:30px;padding:12px;box-shadow:0 12px 30px rgba(255,111,130,.35);margin-top:12px}
 .cm-top{display:flex;align-items:center;justify-content:center;gap:8px;color:#fff;font-weight:900;font-size:17px;letter-spacing:2px;padding:4px 0 10px}
@@ -416,6 +445,7 @@ const ACH = [
   {id:'cheer', icon:'💪', name:'暖心同事', desc:'為同事打氣 10 次',         title:'暖心同事',   test:s=>s.cheerCount>=10},
   {id:'dex5',  icon:'📖', name:'收藏家',   desc:'圖鑑收集 5 種型態',        title:'收藏家',     test:s=>s.seen.length>=5},
   {id:'adult', icon:'🦋', name:'完全體',   desc:'寵物進化為成熟期',         title:'育成大師',   test:s=>s.pet.stage>=3},
+  {id:'spfeed',icon:'🏪', name:'店寵保母', desc:'餵食門市寵物 10 次',       title:'店寵保母',   test:s=>(s.spFeeds||0)>=10},
   {id:'grad',  icon:'🎓', name:'光榮畢業', desc:'寵物畢業進入名人堂',       title:'名人堂主人', test:s=>s.hall.length>=1},
 ];
 
@@ -467,7 +497,14 @@ const Store = {
   load(){ try{ const raw=localStorage.getItem(this.key()); return raw?JSON.parse(raw):null; }catch(e){ return null; } },
   save(){ try{ localStorage.setItem(this.key(), JSON.stringify(S)); localStorage.setItem('mochi:lastUid', UID); }catch(e){ console.warn('save failed',e); } },
 };
-const save = () => Store.save();
+/* 店寵（門市共養寵物）：以門市為單位存檔。正式版改為店務系統伺服器上的共享資料 */
+let SP = null;
+const StoreRepo = {
+  key(store){ return CONFIG.storagePrefix + 'store:' + store; },
+  load(store){ try{ const raw=localStorage.getItem(this.key(store)); return raw?JSON.parse(raw):null; }catch(e){ return null; } },
+  save(){ if(!SP) return; try{ localStorage.setItem(this.key(SP.store), JSON.stringify(SP)); }catch(e){ console.warn('store save failed',e); } },
+};
+const save = () => { Store.save(); StoreRepo.save(); };
 
 function newPet(name){
   return {name, form:'egg', stage:0, level:1, xp:0, attrs:{guard:0,mech:0,harvest:0,kind:0,wise:0},
@@ -536,6 +573,7 @@ function completeTask(code, opt={}){
   const wk=weekStart(); S.week[wk]=(S.week[wk]||0)+1;
   if(S.pet.stage===0) S.pet.hatch++;
   addXP(xp);
+  spOnTask(def.attr, xp, S.user.name);
   updateStreak();
   checkAch();
   save();
@@ -607,6 +645,85 @@ function checkAch(){
 }
 function runQueueLater(){ setTimeout(runQueue,600); }
 
+/* ---------------- 店寵邏輯 ---------------- */
+const SP_HATCH = 10, SP_STAR_XP = 3000;
+const spNeed = lv => 120 + lv*60;
+function newStorePet(store){
+  return {store, name:'旺旺', form:'egg', stage:0, level:1, xp:0, stars:0, hatch:0, attrs:{guard:0,mech:0,harvest:0,kind:0,wise:0},
+    stats:{food:80,fun:80}, lastTick:Date.now(), born:Date.now(), week:weekStart(), weekContrib:{}, pats:{}, npc:{date:'',map:{}}};
+}
+function loadStorePet(){
+  SP = StoreRepo.load(S.user.store) || newStorePet(S.user.store);
+  spTick(); syncNPC(); StoreRepo.save();
+}
+function spTick(){
+  const now=Date.now(), h=Math.max(0,(now-SP.lastTick)/36e5); SP.lastTick=now;
+  if(SP.stage>0){ SP.stats.food=clamp(SP.stats.food-2*h); SP.stats.fun=clamp(SP.stats.fun-2*h); }
+}
+function spMood(){
+  if(SP.stage===0) return 'egg';
+  const s=SP.stats, m=Math.min(s.food,s.fun), avg=(s.food+s.fun)/2;
+  if(m<25) return 'sad'; if(avg>=75) return 'joy'; if(avg>=50) return 'happy'; return 'normal';
+}
+function spContrib(name, pts){
+  if(SP.week!==weekStart()){ SP.week=weekStart(); SP.weekContrib={}; }
+  SP.weekContrib[name]=(SP.weekContrib[name]||0)+pts;
+}
+/* 任何夥伴完成任務 → 店寵吃飽一點、長大一點，屬性決定進化方向 */
+function spOnTask(attr, xp, who){
+  if(!SP){ loadStorePet(); }
+  spTick();
+  SP.stats.food=clamp(SP.stats.food+3);
+  SP.attrs[attr]+=xp;
+  if(SP.stage===0) SP.hatch++;
+  spContrib(who, 2);
+  spAddXP(Math.round(xp*.6));
+}
+function spAddXP(n){
+  SP.xp+=n;
+  while(SP.level<CONFIG.maxLevel && SP.xp>=spNeed(SP.level)){ SP.xp-=spNeed(SP.level); SP.level++; }
+  if(SP.level>=CONFIG.maxLevel){ while(SP.xp>=SP_STAR_XP){ SP.xp-=SP_STAR_XP; SP.stars++; const st=SP.stars; queue(()=>{ toast(`🌟 門市寵物 ${SP.name} 獲得第 ${st} 顆繁榮之星！`,'gold'); runQueueLater(); }); } }
+  spCheckEvolve();
+}
+function spCheckEvolve(){
+  let to=null;
+  if(SP.stage===0 && SP.hatch>=SP_HATCH) to='mochi';
+  else if(SP.stage===1 && SP.level>=5) to='c_'+dominant(SP.attrs);
+  else if(SP.stage===2 && SP.level>=12){ const v=Object.values(SP.attrs), mx=Math.max(...v), mn=Math.min(...v); to = (mn>0 && (mx-mn)/mx<.3) ? 'a_rainbow' : 'a_'+dominant(SP.attrs); }
+  if(!to) return;
+  const from=SP.form; SP.form=to; SP.stage=FORMS[to].stage;
+  if(SP.stage===1){ SP.stats={food:80,fun:85}; SP.lastTick=Date.now(); }
+  if(S && !S.seen.includes(to)) S.seen.push(to);
+  queue(()=>evolveFx(from,to,true));
+  spCheckEvolve();
+}
+/* 原型：把模擬同事「今天多完成的任務」增量灌進店寵（正式版由伺服器處理） */
+function syncNPC(){
+  if(!SP) return;
+  if(SP.npc.date!==dkey()) SP.npc={date:dkey(), map:{}};
+  colleagues().forEach(m=>{
+    const delta=m.done-(SP.npc.map[m.id]||0);
+    for(let i=0;i<delta;i++) spOnTask(m.attr, 20, m.name);
+    if(delta>0) SP.npc.map[m.id]=m.done;
+  });
+}
+function spFeed(){
+  spTick();
+  if(SP.stage===0){ toast('店寵還是一顆蛋，全店一起完成任務就能孵化！'); return; }
+  if(S.food<=0){ toast('你的飼料用完了！完成任務可以獲得 🍙'); SFX.fail(); return; }
+  if(SP.stats.food>=96){ spSay('吃飽飽了，謝謝！'); return; }
+  S.food--; SP.stats.food=clamp(SP.stats.food+20); S.coins+=2; S.spFeeds=(S.spFeeds||0)+1; spContrib(S.user.name,1); careXP(2);
+  checkAch(); save(); SFX.pop(); vibrate(12); renderStore(); refreshLight(); spSay(`謝謝 ${S.user.name}！好好吃～`); fx('🍙'); toast('餵食店寵 🪙+2・照顧貢獻 +1'); runQueue();
+}
+function spPat(){
+  spTick();
+  const k=dkey(), list=SP.pats[k]||[];
+  if(list.includes(S.user.name)){ spSay('今天已經摸過囉，明天再來～'); return; }
+  SP.pats={[k]:[...list,S.user.name]}; SP.stats.fun=clamp(SP.stats.fun+15); S.coins+=3; spContrib(S.user.name,1);
+  save(); SFX.pop(); vibrate(10); renderStore(); refreshLight(); spSay(SP.stage===0?'（蛋輕輕晃了一下）':'好舒服～大家今天也加油！'); fx('💗',3); toast('摸摸店寵 🪙+3・照顧貢獻 +1');
+}
+function spSay(t){ const el=$('#spSpeech'); if(!el) return; el.textContent=t; el.classList.add('on'); clearTimeout(spSay.t); spSay.t=setTimeout(()=>el.classList.remove('on'),2200); }
+
 /* ---------------- 照顧動作 ---------------- */
 let transientMood=null;
 const LINES = {
@@ -621,7 +738,7 @@ function say(text){
   el.textContent=text; el.classList.add('on'); clearTimeout(say.t); say.t=setTimeout(()=>el.classList.remove('on'),2200);
 }
 function fx(emoji, n=1, spread=60){
-  const room=$('.room'); if(!room) return;
+  const room=$('.room')||$('.scene'); if(!room) return;
   for(let i=0;i<n;i++){ const e=document.createElement('div'); e.className='fx'; e.textContent=emoji;
     e.style.left=`calc(50% + ${(Math.random()-.5)*spread*2}px)`; e.style.bottom=`${120+Math.random()*60}px`; e.style.animationDelay=`${i*.12}s`;
     room.appendChild(e); setTimeout(()=>e.remove(),1600+i*120); }
@@ -682,18 +799,19 @@ function faceSVG(mood, eye='#2E2442', hi='#fff'){
     default: return `${openEyes}${cheeks}<path d="M92 134 Q100 141 108 134" ${S2}/>`;
   }
 }
-function eggSVG(hatch=0, sil=false){
+const STORE_BADGE = `<circle cx="100" cy="170" r="12" fill="#FFD45C" stroke="#E0A800" stroke-width="3"/><text x="100" y="174.5" font-size="12" font-weight="900" text-anchor="middle" fill="#8A5A00" font-family="sans-serif">店</text>`;
+function eggSVG(hatch=0, sil=false, store=false){
   const c=sil?'#ddd':'#FFF6E6', dk=sil?'#ccc':'#E9CFA6';
   const cracks = hatch>=1 ? `<path d="M74 112 l10 8 l8 -10 l9 9" stroke="#B08A5A" stroke-width="3" fill="none" stroke-linejoin="round"/>`:'';
   const cracks2 = hatch>=2 ? `<path d="M110 92 l8 10 l10 -6 l6 10" stroke="#B08A5A" stroke-width="3" fill="none" stroke-linejoin="round"/>`:'';
   return `<svg viewBox="0 0 200 200" class="pet-svg egg"><ellipse cx="100" cy="188" rx="46" ry="7" fill="rgba(0,0,0,.12)"/><g class="body">
     <path d="M100 38 C138 38 160 104 160 138 C160 170 134 188 100 188 C66 188 40 170 40 138 C40 104 62 38 100 38Z" fill="${c}" stroke="${dk}" stroke-width="4"/>
     ${sil?'':`<circle cx="76" cy="150" r="11" fill="#FFD3B5"/><circle cx="126" cy="128" r="8" fill="#C8E6FF"/><circle cx="110" cy="166" r="6" fill="#D9F2C9"/><circle cx="84" cy="88" r="7" fill="#F8D3FF"/><ellipse cx="78" cy="70" rx="12" ry="7" fill="#fff" opacity=".7" transform="rotate(-30 78 70)"/>`}
-    ${cracks}${cracks2}</g></svg>`;
+    ${cracks}${cracks2}${store&&!sil?STORE_BADGE:''}</g></svg>`;
 }
 function petSVG(id, o={}){
   const f=FORMS[id]||FORMS.mochi, sil=!!o.sil, mood=o.mood||'happy';
-  if(id==='egg') return eggSVG(o.hatch||0, sil);
+  if(id==='egg') return eggSVG(o.hatch||0, sil, o.store);
   const c=sil?'#D8D2E2':f.color, dk=sil?'#C2BBD0':shade(f.color,-.3), lt=sil?'#D8D2E2':shade(f.color,.5);
   const sc=f.stage===1?.78:f.stage===2?.9:1;
   const at=f.attr, adult=f.stage===3;
@@ -740,7 +858,7 @@ function petSVG(id, o={}){
     <ellipse cx="162" cy="140" rx="10" ry="15" fill="${c}" stroke="${dk}" stroke-width="3.5" transform="rotate(-24 162 140)"/>
     <path d="M100 62 C146 62 166 100 166 134 C166 168 138 184 100 184 C62 184 34 168 34 134 C34 100 54 62 100 62Z" fill="${c}" stroke="${dk}" stroke-width="4"/>
     ${sil?'':`<ellipse cx="100" cy="152" rx="40" ry="25" fill="${lt}" opacity=".75"/><ellipse cx="70" cy="86" rx="15" ry="8" fill="#fff" opacity=".5" transform="rotate(-28 70 86)"/>`}
-    ${face}${top}${side}
+    ${face}${top}${side}${o.store&&!sil?`<path d="M44 147 Q100 170 156 147 L158 159 Q100 185 42 159Z" fill="#FF6B6B" stroke="#D04848" stroke-width="3" stroke-linejoin="round"/>`+STORE_BADGE:''}
   </g></g></svg>`;
 }
 
@@ -764,15 +882,15 @@ function levelUp(lv){
   overlay(`<div class="pet"><div class="rays"></div>${petSVG(S.pet.form,{mood:'joy',hatch:S.pet.hatch})}</div><h2>升級！Lv.${lv}</h2><p class="sub">${esc(S.pet.name)} 變得更有精神了</p>${nextGoal()}<button class="btn pri block" data-close style="margin-top:18px">太棒了</button>`);
 }
 function nextGoal(){ const p=S.pet; if(p.stage===1) return `<p class="sub">Lv.5 將進入幼年期（${p.level}/5）</p>`; if(p.stage===2) return `<p class="sub">Lv.12 將進入成熟期（${p.level}/12）</p>`; if(p.level>=CONFIG.maxLevel) return `<p class="sub">已達最高等級，可以舉行畢業典禮了！</p>`; return ''; }
-function evolveFx(from,to){
+function evolveFx(from,to,isStore=false){
   SFX.level(); vibrate([30,60,30,60,60]); confetti(60);
-  const hatch = from==='egg';
-  const o=overlay(`<div class="pet"><div class="rays"></div><div id="evoPet">${petSVG(from,{mood:'happy',hatch:3})}</div></div>
-    <h2 id="evoTitle">${hatch?'蛋好像要裂開了…':'咦？'+esc(S.pet.name)+' 的樣子…'}</h2><p class="sub" id="evoSub">&nbsp;</p>
+  const hatch = from==='egg', nm = isStore ? SP.name : S.pet.name;
+  const o=overlay(`${isStore?'<span class="tag" style="background:#3A2E4A;color:#fff">🏪 門市共養寵物</span>':''}<div class="pet"><div class="rays"></div><div id="evoPet">${petSVG(from,{mood:'happy',hatch:3,store:isStore})}</div></div>
+    <h2 id="evoTitle">${hatch?'蛋好像要裂開了…':'咦？'+esc(nm)+' 的樣子…'}</h2><p class="sub" id="evoSub">&nbsp;</p>
     <button class="btn pri block hidden" id="evoBtn" data-close style="margin-top:18px">好可愛！</button>`);
-  setTimeout(()=>{ const ep=o.querySelector('#evoPet'); ep.innerHTML=petSVG(to,{mood:'joy'}); ep.classList.add('flash');
-    o.querySelector('#evoTitle').textContent = hatch?`${S.pet.name} 孵化了！`:`進化成「${FORMS[to].name}」！`;
-    o.querySelector('#evoSub').textContent = hatch?'記得餵食、清潔、陪牠玩喔':`${['','','幼年期','成熟期'][FORMS[to].stage]}・圖鑑已登錄`;
+  setTimeout(()=>{ const ep=o.querySelector('#evoPet'); ep.innerHTML=petSVG(to,{mood:'joy',store:isStore}); ep.classList.add('flash');
+    o.querySelector('#evoTitle').textContent = hatch?`${nm} 孵化了！`:`${isStore?nm+' ':''}進化成「${FORMS[to].name}」！`;
+    o.querySelector('#evoSub').textContent = isStore ? (hatch?'全店一起努力的成果！記得常去門市空間餵牠、摸摸牠':`全店最常做的任務決定了牠的樣子・${['','','幼年期','成熟期'][FORMS[to].stage]}`) : (hatch?'記得餵食、清潔、陪牠玩喔':`${['','','幼年期','成熟期'][FORMS[to].stage]}・圖鑑已登錄`);
     o.querySelector('#evoBtn').classList.remove('hidden'); SFX.ok(); }, 1800);
 }
 
@@ -789,6 +907,7 @@ const TAB_NAMES={home:'寵物',tasks:'任務',store:'門市',park:'樂園',dex:'
 
 function render(){
   if(!S){ (params.get('name')&&params.get('store')) ? renderOnboarding(2,{name:params.get('name'),store:params.get('store'),shift:SHIFTS[params.get('shift')]?params.get('shift'):'early'}) : renderOnboarding(); return; }
+  if(!SP || SP.store!==S.user.store) loadStorePet();
   const app=$('#app');
   const d=today(), left=d.tasks.filter(t=>!t.done).length;
   const p=S.pet, pct=p.level>=CONFIG.maxLevel?100:Math.round(p.xp/need(p.level)*100);
@@ -839,11 +958,14 @@ function renderHome(){
   ${grad?`<div class="card grad cta" id="gradBtn"><div style="font-size:40px">🎓</div><div class="t"><b>可以舉行畢業典禮了！</b><div class="sub">${esc(p.name)} 將進入名人堂，下一代經驗 +10%</div></div><span class="arrow">›</span></div>`:''}
   <div class="card cta" id="goTasks"><div class="ring" style="--p:${Math.round(done/tot*100)}"><b>${done}/${tot}</b></div>
     <div class="t"><b>${done===tot?'今日任務全部完成！':'今日門市任務'}</b><div class="sub">${done===tot?(d.chest?'明天見，記得回來照顧牠喔':'還有一個寶箱等你打開 🎁'):`再完成 ${tot-done} 個，${esc(p.name)} 會更有精神`}</div></div><span class="arrow">›</span></div>
+  <div class="card cta" id="goStore"><div style="width:60px;height:60px;flex:none">${petSVG(SP.form,{mood:spMood(),hatch:Math.min(2,Math.floor(SP.hatch/4)),store:true})}</div>
+    <div class="t"><b>門市共養・${esc(SP.name)}</b><div class="sub">${SP.stage===0?`全店完成 ${SP.hatch}/${SP_HATCH} 個任務就會孵化`:`Lv.${SP.level}・飽足 ${Math.round(SP.stats.food)}%・心情 ${Math.round(SP.stats.fun)}%${SP.stats.food<35?'・肚子餓了！':''}`}</div></div><span class="arrow">›</span></div>
   <div class="card" style="display:flex;align-items:center;gap:12px"><div style="font-size:30px">🏷️</div><div style="flex:1"><div class="sub">目前稱號</div><b>${esc(S.title||'尚未取得')}</b></div><span class="tag">第 ${S.generation} 代</span><button class="gear" id="openSet" aria-label="設定">⚙️</button></div>`;
   renderPet();
   $('#petWrap').onclick=()=>{ if(egg){ petAnim('jump'); say('（叩叩…）'); return; } if(p.sleeping){ say('Zzz…'); return; } tick(); p.stats.fun=clamp(p.stats.fun+2); fx('💗',2); petAnim('jump'); say(); careXP(1); save(); refreshLight(); runQueue(); SFX.pop(); vibrate(8); };
   document.querySelectorAll('[data-care]').forEach(b=>b.onclick=()=>care(b.dataset.care));
   $('#goTasks').onclick=()=>{ TAB='tasks'; render(); };
+  $('#goStore').onclick=()=>{ TAB='store'; render(); window.scrollTo(0,0); };
   $('#openSet').onclick=openSettings;
   if(grad) $('#gradBtn').onclick=graduate;
 }
@@ -929,10 +1051,11 @@ function colleagues(){
     const lv=4+Math.floor(r()*14), at=Object.keys(ATTR)[Math.floor(r()*5)];
     const form = lv>=12 ? (r()<.12?'a_rainbow':'a_'+at) : lv>=5 ? 'c_'+at : 'mochi';
     const rd=rng(dkey()+S.user.store+nm), total=6, done=Math.min(total,Math.round(total*prog*(.55+rd()*.6)));
-    return {id:'npc'+i, name:nm, pet:pets[i%pets.length], form, level:lv, done, total, streak:Math.floor(r()*20), title:ACH[Math.floor(r()*ACH.length)].title};
+    return {id:'npc'+i, name:nm, attr:at, pet:pets[i%pets.length], form, level:lv, done, total, streak:Math.floor(r()*20), title:ACH[Math.floor(r()*ACH.length)].title};
   });
 }
 function renderStore(){
+  spTick(); syncNPC(); StoreRepo.save();
   const mates=colleagues(), d=today(), myDone=d.tasks.filter(t=>t.done).length;
   const dow=(new Date().getDay()+6)%7;
   const goal=(mates.length+1)*30, wk=weekStart();
@@ -942,11 +1065,50 @@ function renderStore(){
   const storeRate=Math.round((myDone+mates.reduce((s,m)=>s+m.done,0))/(d.tasks.length+mates.reduce((s,m)=>s+m.total,0))*100);
   const r=rng('lb|'+dkey()); const others=shuffle(STORES.filter(s=>s!==S.user.store),r).slice(0,9).map(s=>({s,v:Math.round(clamp(storeRate+(r()-.45)*40,10,100))}));
   const lb=[...others,{s:S.user.store,v:storeRate,me:true}].sort((a,b)=>b.v-a.v);
+
+  // 共享空間：店寵在中央，所有夥伴的寵物圍繞
+  const myMood=moodOf();
+  const members=[{id:'me',me:true,name:S.user.name,form:S.pet.form,hatch:S.pet.hatch,mood:myMood==='egg'?'happy':myMood,done:myDone,total:d.tasks.length},
+    ...mates.map(m=>({...m,mood:m.done>=4?'joy':'happy'}))];
+  const SLOTS=[['left:0;bottom:122px',5],['right:0;bottom:122px',5],['left:6px;bottom:240px',3],['right:6px;bottom:240px',3],['left:9%;bottom:2px',6],['right:9%;bottom:2px',6]];
+  const MC=[['#FF9EB5','#FFD45C','#7FD68E','#8CC4FF'],['#8CC4FF','#FF8A8A','#FFD45C','#B79CFF'],['#FFD45C','#FF9EB5','#8CC4FF','#7FD68E'],['#B79CFF','#7FD68E','#FF8A8A','#FFD45C'],['#7FD68E','#8CC4FF','#FF9EB5','#FF8A8A'],['#FF8A8A','#B79CFF','#7FD68E','#8CC4FF']];
+  const spHatch=Math.min(2,Math.floor(SP.hatch/4)), m=spMood();
+  const spNeedTxt = SP.stage>0 && SP.stats.food<35 ? '🍙 肚子餓了…' : SP.stage>0 && SP.stats.fun<35 ? '🥺 想要摸摸' : '';
+  const patted=(SP.pats[dkey()]||[]).includes(S.user.name);
+  const xpPct = SP.level>=CONFIG.maxLevel ? SP.xp/SP_STAR_XP*100 : SP.xp/spNeed(SP.level)*100;
+  const mx=Math.max(1,...Object.values(SP.attrs));
+  const board=[{name:S.user.name,me:true,v:SP.weekContrib[S.user.name]||0},
+    ...mates.map(x=>({name:x.name,v:(SP.weekContrib[x.name]||0)+dow*Math.round(x.total*.8)*2}))].sort((a,b)=>b.v-a.v);
+
   $('#page').innerHTML = `
-  <div class="plaza"><div class="sign">🏪 ${esc(S.user.store)} 廣場</div><div class="grid">
-    <div class="mate me" data-mate="me"><div class="p">${petSVG(S.pet.form,{mood:moodOf()==='egg'?'happy':moodOf(),hatch:S.pet.hatch})}</div><div class="n">${esc(S.user.name)}（我）</div><div class="s">今日 ${myDone}/${d.tasks.length}</div></div>
-    ${mates.map(m=>`<div class="mate" data-mate="${m.id}"><div class="p">${petSVG(m.form,{mood:m.done>=4?'joy':'happy'})}</div><div class="n">${m.name}</div><div class="s">${cheered.includes(m.id)?'💪 ':''}今日 ${m.done}/${m.total}</div></div>`).join('')}
-  </div></div>
+  <div class="scene">
+    <div class="sign">🏪 ${esc(S.user.store)}・夥伴空間</div>
+    <div class="machines">${MC.map((c,i)=>`<div class="mc" style="--c:${c[0]}">${[0,1,2].map(j=>`<i style="left:${9+j*12}px;background:${c[j+1]}"></i>`).join('')}<b></b></div>`).join('')}</div>
+    <div class="ground"></div>
+    <div class="stage"></div>
+    <div class="sp-speech" id="spSpeech"></div>
+    ${spNeedTxt?`<div class="sp-need">${spNeedTxt}</div>`:''}
+    <div class="storepet" id="storePet">${petSVG(SP.form,{mood:m,hatch:spHatch,store:true})}</div>
+    <div class="sp-tag">👑 ${esc(SP.name)}・Lv.${SP.level}</div>
+    ${members.slice(0,SLOTS.length).map((x,i)=>`<div class="member ${x.me?'me':''}" data-mate="${x.id}" style="${SLOTS[i][0]};z-index:${SLOTS[i][1]};--d:${5+(i*1.7)%4}s;--w:${10+(i*5)%12}px;animation-delay:-${i*1.3}s">
+      <div class="p">${petSVG(x.form,{mood:x.mood,hatch:x.hatch||0})}</div><div class="n">${esc(x.name)}${x.me?'（我）':''}</div><div class="s">${!x.me&&cheered.includes(x.id)?'💪 ':''}今日 ${x.done}/${x.total}</div></div>`).join('')}
+  </div>
+
+  <div class="card sp-card">
+    <div class="hd"><div class="mini">${petSVG(SP.form,{mood:m,hatch:spHatch,store:true})}</div>
+      <div style="flex:1;min-width:0"><b style="font-size:17px">${esc(SP.name)}</b> <button class="tag" id="spRename">✏️ 改名</button>
+        <div class="sub">門市共養・${FORMS[SP.form].name}・Lv.${SP.level}${SP.stars?`・🌟×${SP.stars}`:''}</div>
+        <div class="xpbar" style="max-width:none;margin-top:8px"><i style="width:${xpPct}%"></i></div></div></div>
+    ${SP.stage===0?`<p class="sub" style="margin:14px 0 8px">🥚 全店一起完成 ${SP_HATCH} 個任務就會孵化（${SP.hatch}/${SP_HATCH}）</p><div class="prog"><i style="width:${Math.min(100,SP.hatch/SP_HATCH*100)}%"></i></div>`:
+    `<div class="stats" style="margin-top:14px">${[['food','🍙','飽足','#FFA94D'],['fun','💗','心情','#F06A9B']].map(([k,ic,nm,col])=>`<div class="stat ${SP.stats[k]<30?'low':''}"><span class="ic">${ic}</span><span style="width:28px">${nm}</span><div class="bar"><i style="width:${Math.round(SP.stats[k])}%;background:${col}"></i></div></div>`).join('')}</div>`}
+    <div class="row"><button class="btn pri" style="flex:1" id="spFeed">🍙 餵食（剩 ${S.food}）</button><button class="btn" style="flex:1" id="spPat" ${patted?'disabled':''}>${patted?'今天摸過了':'🤲 摸摸頭'}</button></div>
+    <p class="sub" style="margin:14px 0 10px">全店每完成 1 個任務，${esc(SP.name)} 就會吃飽一點、長大一點。<b>團隊最常做的任務類型</b>決定牠的進化方向。</p>
+    <div class="attrs">${Object.entries(ATTR).map(([k,a])=>`<div class="attr"><span style="width:56px">${a.icon} ${a.name}</span><div class="bar"><i style="width:${SP.attrs[k]/mx*100}%;background:${a.hex}"></i></div></div>`).join('')}</div>
+  </div>
+
+  <div class="h">本週照顧貢獻<small>任務 2 分・餵食／摸摸 1 分</small></div>
+  <div class="card" style="padding:8px 12px">${board.map((x,i)=>`<div class="lb ${i<3?'top'+(i+1):''} ${x.me?'mine':''}"><span class="rk">${i+1}</span><span class="nm">${esc(x.name)}${x.me?'（我）':''}</span><span class="pc">${x.v} 分</span></div>`).join('')}</div>
+
   <div class="card"><div style="display:flex;align-items:center"><b>🤝 本週團隊挑戰</b><span class="sub" style="margin-left:auto">${progress}/${goal}</span></div>
     <p class="sub" style="margin:6px 0 10px">全店一起完成 ${goal} 個任務，每人都能獲得「門市旗幟」擺飾 + 🪙100</p>
     <div class="prog"><i style="width:${progress/goal*100}%"></i></div>
@@ -955,7 +1117,12 @@ function renderStore(){
   <div class="card" style="padding:8px 12px">${lb.map((x,i)=>`<div class="lb ${i<3?'top'+(i+1):''} ${x.me?'mine':''}"><span class="rk">${i+1}</span><span class="nm">${esc(x.s)}${x.me?'（我們）':''}</span><span class="pc">${x.v}%</span></div>`).join('')}</div>
   <p class="sub" style="text-align:center;margin-top:14px">＊原型階段同事與排行為模擬資料，串接店務系統後即為真實資料</p>`;
   document.querySelectorAll('[data-mate]').forEach(el=>el.onclick=()=>openMate(el.dataset.mate,mates));
+  $('#storePet').onclick=spPat;
+  $('#spFeed').onclick=spFeed;
+  $('#spPat').onclick=spPat;
+  $('#spRename').onclick=()=>{ const n=(prompt('幫門市寵物取新名字（正式版限店長）',SP.name)||'').trim().slice(0,8); if(n){ SP.name=n; save(); renderStore(); } };
   const c=$('#claimTeam'); if(c) c.onclick=()=>{ S.teamClaimed[wk]=true; S.coins+=100; if(!S.owned.includes('flag')) S.owned.push('flag'); S.placed.flag='flag'; save(); SFX.level(); confetti(); toast('🚩 獲得門市旗幟（已擺進小屋）🪙+100','gold'); render(); };
+  setTimeout(runQueue,300);
 }
 function openMate(id,mates){
   if(id==='me'){ TAB='home'; render(); return; }
@@ -1128,7 +1295,7 @@ function renderOnboarding(step=1, draft={}){
   }else{
     app.innerHTML=`<div class="onb"><div class="logo"><div class="p" style="width:200px;height:200px">${eggSVG(0)}</div><h1 style="font-size:24px">你收到了一顆蛋！</h1><p class="sub">每完成一個門市任務，蛋就會長大一點<br>完成 3 個任務就會孵化</p></div>
       <label class="field"><span>幫牠取個名字</span><input id="oPet" maxlength="8" placeholder="例如：麻糬"></label>
-      <div class="card" style="font-size:13px;line-height:1.7"><b>小提醒</b><br>・寵物不會死掉，只是會想你 🥺<br>・你做的任務種類，決定牠進化成什麼樣子<br>・全店一起努力，每週還有團隊獎勵</div>
+      <div class="card" style="font-size:13px;line-height:1.7"><b>小提醒</b><br>・寵物不會死掉，只是會想你 🥺<br>・你做的任務種類，決定牠進化成什麼樣子<br>・門市還有一隻大家共養的店寵，全店一起把牠養大</div>
       <div class="grow"></div><button class="btn pri block" id="oGo" style="margin-top:24px">開始照顧</button></div>`;
     $('#oGo').onclick=()=>{ const pn=$('#oPet').value.trim()||'麻糬'; if(UID==='local') UID='u'+Date.now().toString(36);
       S=newState({uid:UID,name:draft.name,store:draft.store,shift:draft.shift},pn); save(); SFX.ok(); TAB='home'; render();
@@ -1146,6 +1313,7 @@ window.addEventListener('message',e=>{
 window.MochiPartner = {
   completeTask: code => completeTask(code,{external:true}),
   getState: () => JSON.parse(JSON.stringify(S)),
+  getStorePet: () => JSON.parse(JSON.stringify(SP)),
   todayTasks: () => today().tasks.map(t=>({code:t.code,title:TASK_MAP[t.code].title,done:t.done})),
 };
 
@@ -1156,12 +1324,12 @@ function boot(){
   if(S){
     if(params.get('name')) S.user.name=params.get('name');
     if(params.get('store')) S.user.store=params.get('store');
-    const away=tick(); dailyRollover(); today();
+    const away=tick(); dailyRollover(); today(); loadStorePet();
     if(S.pet.stage>0 && away>=20){ S.food+=2; queue(()=>overlay(`<div class="pet">${petSVG(S.pet.form,{mood:'joy'})}</div><h2>歡迎回來！</h2><p class="sub">${esc(S.pet.name)} 好想你～<br>送你回歸禮物 🍙×2</p><button class="btn pri block" data-close style="margin-top:18px">摸摸頭</button>`)); }
     S.lastVisit=dkey(); save();
   }
   render(); setTimeout(runQueue,400);
-  setInterval(()=>{ if(!S) return; const before=moodOf(); tick(); save();
+  setInterval(()=>{ if(!S) return; const before=moodOf(); tick(); if(SP) spTick(); save();
     if(TAB==='home' && !ovOpen){ const st=$('#stats'); if(st){ const b=st.querySelectorAll('.bar i'); ['food','fun','clean','energy'].forEach((k,i)=>{ b[i].style.width=Math.round(S.pet.stats[k])+'%'; }); } if(before!==moodOf()) renderHome(); }
   }, 20000);
   document.addEventListener('visibilitychange',()=>{ if(!document.hidden && S){ tick(); dailyRollover(); render(); } });
