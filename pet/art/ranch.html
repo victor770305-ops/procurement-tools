@@ -1,0 +1,88 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>糰糰牧場 環境設定集</title>
+<style>
+:root{--bg:#FFF8F0;--ink:#2B1B3D;--sub:#857A93;--line:#F0E4D6}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);font-family:-apple-system,BlinkMacSystemFont,"PingFang TC","Noto Sans TC","Microsoft JhengHei",sans-serif;-webkit-font-smoothing:antialiased}
+.wrap{max-width:1240px;margin:0 auto;padding:40px 24px 80px}
+header{text-align:center}
+header h1{font-size:40px;margin:0;letter-spacing:4px}
+header p{color:var(--sub);margin:10px 0 0}
+.sec{margin-top:44px;padding:26px;border-radius:32px;background:#fff;box-shadow:0 8px 28px rgba(90,60,40,.07)}
+.sec h2{margin:0;font-size:26px}
+.sec .lead{color:var(--sub);margin:6px 0 18px;line-height:1.6}
+.frame{border-radius:22px;overflow:hidden;background:#EFE6DA;line-height:0}
+.frame svg{width:100%;height:auto;display:block}
+.grid{display:grid;gap:16px}
+.g3{grid-template-columns:repeat(3,1fr)}.g4{grid-template-columns:repeat(4,1fr)}.g5{grid-template-columns:repeat(5,1fr)}.g2{grid-template-columns:1.1fr 1fr}
+.cap{margin-top:8px;font-weight:900;font-size:15px;text-align:center}
+.cap small{display:block;color:var(--sub);font-weight:600;font-size:12px;margin-top:2px}
+.scene-row{display:grid;grid-template-columns:400px 1fr;gap:22px;align-items:start}
+.notes{font-size:14px;line-height:1.7}
+.notes b{color:#FF7A59}
+.notes li{margin-bottom:6px}
+table{width:100%;border-collapse:collapse;font-size:14px}
+th,td{padding:11px 14px;text-align:left;border-bottom:1px solid var(--line);vertical-align:top;line-height:1.55}
+th{background:#FBF1E6;font-size:13px}
+.rn-cloud{animation:drift 30s linear infinite alternate}
+.rn-spin{animation:spin 8s linear infinite}
+.rn-flag{animation:flag 2s ease-in-out infinite;transform-box:fill-box;transform-origin:0 50%}
+.rn-twinkle,.rn-blink{animation:tw 2s ease-in-out infinite}
+.rn-firefly{animation:tw 1.6s ease-in-out infinite}
+.rn-fall{animation:fall 7s linear infinite}
+.rn-smoke{animation:smoke 3s ease-in-out infinite}
+.cr-body{transform-box:fill-box;transform-origin:50% 100%;animation:idle 2.8s ease-in-out infinite}
+.cr-float .cr-body{animation:hover 3.2s ease-in-out infinite}
+.cr-spark,.cr-blink{animation:tw 2s infinite}
+@keyframes drift{to{transform:translateX(30px)}}
+@keyframes spin{to{transform:rotate(360deg)}}
+@keyframes flag{50%{transform:skewY(6deg) scaleX(.92)}}
+@keyframes tw{50%{opacity:.25}}
+@keyframes fall{from{transform:translateY(-40px)}to{transform:translateY(60px)}}
+@keyframes smoke{50%{transform:translateY(-6px);opacity:.5}}
+@keyframes idle{50%{transform:scale(1.025,.975)}}
+@keyframes hover{50%{transform:translateY(-6px)}}
+.static *{animation:none!important}
+@media(max-width:900px){.g3,.g4,.g5,.g2,.scene-row{grid-template-columns:1fr 1fr}}
+</style>
+</head>
+<body>
+<div class="wrap" id="root"></div>
+<script src="creatures.js"></script>
+<script src="ranch.js"></script>
+<script>
+const R = window.Ranch, F = Creatures.FAMILIES;
+const TN = {dawn:'清晨',day:'白天',dusk:'黃昏',night:'夜晚'}, SN = {spring:'春',summer:'夏',autumn:'秋',winter:'冬'};
+let h = `<header><h1>糰糰牧場 環境設定集</h1><p>每家門市就是一座牧場：夥伴的寵物、門市共養的店寵，都生活在這裡。</p></header>`;
+h += `<section class="sec" id="s-map"><h2>① 牧場全景地圖</h2><p class="lead">從入口走進來，中央廣場是店寵的守護台；外圍是 5 系寵物的棲息地，以及市集、牧舍、孵蛋屋、名人堂等設施。每個地點都對應到遊戲裡的一個功能。</p><div class="frame">${R.map()}</div></section>`;
+h += `<section class="sec" id="s-scenes"><h2>② 主要場景（手機畫面比例）</h2><p class="lead">這三個是夥伴每天最常看到的畫面。</p>
+<div class="grid g3"><div><div class="frame">${R.plaza()}</div><div class="cap">中央廣場<small>店寵站在守護台上，全店夥伴的寵物圍繞（取代原本的「門市夥伴空間」）</small></div></div>
+<div><div class="frame">${R.cabin()}</div><div class="cap">牧舍內部<small>每個人的個人小屋：乾草窩、窗外看得到牧場，擺飾都放在這裡</small></div></div>
+<div><div class="frame">${R.market()}</div><div class="cap">市集<small>夾娃娃機攤位與雜貨鋪，用任務賺來的金幣消費</small></div></div></div></section>`;
+h += `<section class="sec" id="s-hab"><h2>③ 五系棲息地</h2><p class="lead">每一系的寵物都有自己的家，場景元素和角色的主題一致。收集到該系角色，就會解鎖對應區域。</p><div class="grid g3">${Object.keys(F).map(f => `<div><div class="frame">${R.habitat(f)}</div><div class="cap">${R.HAB[f].title}<small>${F[f].name}・${F[f].motif}</small></div></div>`).join('')}</div></section>`;
+h += `<section class="sec" id="s-grow"><h2>④ 牧場成長三階段</h2><p class="lead">店寵升級時，牧場也會跟著變熱鬧。這是全店一起努力的長期目標。</p><div class="grid g3">${[[1,'Lv.1 小草地','店寵孵化前後：一個木箱舞台、幾隻夥伴'],[2,'Lv.2 小牧場','店寵進入成長期：圍籬、牧舍、乾草捲、路燈、花圃'],[3,'Lv.3 繁榮牧場','店寵完全體：紅穀倉、風車、觀星台、彩旗、池塘、石造守護台']].map(([lv,t,d]) => `<div><div class="frame">${R.plaza({level:lv, storePet:['g4',lv]})}</div><div class="cap">${t}<small>${d}</small></div></div>`).join('')}</div></section>`;
+h += `<section class="sec" id="s-time"><h2>⑤ 時段變化</h2><p class="lead">跟著現實時間變化：早班看到清晨，晚班看到夜晚的路燈和螢火蟲。</p><div class="grid g4">${Object.keys(TN).map(t => `<div><div class="frame">${R.plaza({time:t})}</div><div class="cap">${TN[t]}</div></div>`).join('')}</div></section>`;
+h += `<section class="sec" id="s-season"><h2>⑥ 四季變化</h2><p class="lead">跟著現實季節換裝：春天櫻花、夏天綠意、秋天金黃落葉、冬天白雪。季節活動的限定擺飾也從這裡延伸。</p><div class="grid g4">${Object.keys(SN).map(x => `<div><div class="frame">${R.plaza({season:x})}</div><div class="cap">${SN[x]}</div></div>`).join('')}</div></section>`;
+h += `<section class="sec" id="s-props"><h2>⑦ 建築與道具設定</h2><p class="lead">組成牧場的所有元件。都可以單獨使用，之後也能當作小屋擺飾在市集販售。</p><div class="frame">${R.props()}</div></section>`;
+h += `<section class="sec" id="s-plan"><h2>⑧ 牧場放進遊戲的規劃</h2><p class="lead">原本的功能全部搬進牧場，底部選單也換成牧場地點。</p>
+<table><tr><th style="width:160px">牧場地點</th><th style="width:240px">遊戲功能</th><th>說明</th></tr>
+<tr><td><b>🏡 牧舍</b></td><td>個人寵物頁（原「寵物」）</td><td>照顧自己的寵物、擺放擺飾。窗外的牧場會跟著時段和季節變化。</td></tr>
+<tr><td><b>📋 佈告欄</b></td><td>每日任務（原「任務」）</td><td>任務單一張張釘在佈告欄上，完成後蓋章撕下。</td></tr>
+<tr><td><b>⛲ 中央廣場</b></td><td>店寵＋全店夥伴（原「門市」）</td><td>店寵站在守護台上，同事的寵物在廣場上走動，可以打氣、餵食店寵。</td></tr>
+<tr><td><b>🎪 市集</b></td><td>夾娃娃機＋商店（原「樂園」）</td><td>攤位會隨季節換主題。</td></tr>
+<tr><td><b>🥚 孵蛋屋</b></td><td>選蛋、孵化、蛋券</td><td>新夥伴在這裡選初始蛋；畢業後在這裡領新的蛋。</td></tr>
+<tr><td><b>🌳 名人堂花園</b></td><td>畢業寵物</td><td>金色的名人堂樹，每畢業一隻就多一座小雕像。</td></tr>
+<tr><td><b>🗺️ 五系棲息地</b></td><td>圖鑑（原「圖鑑」）</td><td>在地圖上點棲息地，就能看到該系的圖鑑。收集到該系角色才解鎖區域，地圖越收集越完整。</td></tr>
+<tr><td><b>📈 牧場成長</b></td><td>全店共同目標</td><td>店寵孵化 → Lv.1 小草地；成長期 → Lv.2 小牧場；完全體 → Lv.3 繁榮牧場。</td></tr>
+<tr><td><b>🕐 時段・四季</b></td><td>依現實時間自動切換</td><td>清晨／白天／黃昏／夜晚；春／夏／秋／冬。季節活動時加上限定裝飾。</td></tr>
+</table>
+<p class="notes" style="margin-top:16px">建議的底部選單：<b>牧舍</b>・<b>佈告欄</b>・<b>廣場</b>・<b>市集</b>・<b>地圖</b>（地圖裡包含五系棲息地圖鑑、孵蛋屋、名人堂）。</p></section>`;
+document.getElementById('root').innerHTML = h;
+if (location.hash === '#static') document.body.classList.add('static');
+</script>
+</body>
+</html>
