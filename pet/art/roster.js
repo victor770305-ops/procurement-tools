@@ -14,7 +14,7 @@ const FAMILIES = {
   kind:    { name: '親和系', icon: '💖', color: '#F06A9B', desc: '協助顧客、會員推廣、環境巡視' },
   wise:    { name: '智慧系', icon: '📘', color: '#8C6CF0', desc: '每日一題、閱讀公告' },
 };
-const RARITY = { starter: { name: '初始', color: '#36B368' }, common: { name: '普通', color: '#5B8DEF' }, rare: { name: '稀有', color: '#B05CF0' }, legend: { name: '傳說・店寵', color: '#F2A23B' } };
+const RARITY = { starter: { name: '初始', color: '#36B368' }, common: { name: '普通', color: '#5B8DEF' }, rare: { name: '稀有', color: '#B05CF0' }, legend: { name: '傳說', color: '#F2A23B' }, divine: { name: '神獸・店寵', color: '#C9A227' } };
 
 const SPECIES = [
   /* 守護系 */
@@ -29,7 +29,7 @@ const SPECIES = [
     concept: '在夜裡無聲巡邏的影子貓，額頭有月牙印記。閉店後守著門市，最終化為披著月蝕鬃毛的獅子。' },
   { id: 'g4', fam: 'guard', rare: 'legend', src: 's4r1', family: '沙丘鼴獅', element: '大地・沙',
     names: ['沙沙鼴', '掘吼獅', '沙丘巨像'], en: ['Dustrit', 'Burroar', 'Dunecoloss'],
-    concept: '結合鼴鼠的挖掘本領與獅子的威嚴，最終背負古老遺跡，成為守護整座牧場的沙丘巨像。' },
+    concept: '結合鼴鼠的挖掘本領與獅子的威嚴，最終背負古老遺跡，成為守護邊境的沙丘巨像。' },
   /* 機械系 */
   { id: 'm1', fam: 'mech', rare: 'starter', src: 's4r5', family: '發明家浣熊', element: '機械・科技',
     names: ['小工浣熊', '機關浣熊', '機甲俠盜'], en: ['Scrappit', 'Gadgetit', 'Mechabandit'],
@@ -42,7 +42,7 @@ const SPECIES = [
     concept: '靠靜電充飽活力的小貂，掌管全店機台的電力，最終成為呼風喚雷的雷霆獸。' },
   { id: 'm4', fam: 'mech', rare: 'legend', src: 's3r1', family: '火山角羊蜥', element: '火・熔岩',
     names: ['焰焰羊', '熔岩角羊', '熔核巨角'], en: ['Emberaa', 'Vulkram', 'Magmashorn'],
-    concept: '體內流著熔岩的角羊蜥，熱力永不熄滅，是機械系的傳說店寵。' },
+    concept: '體內流著熔岩的角羊蜥，熱力永不熄滅，是機械系的傳說角色。' },
   /* 豐收系 */
   { id: 'h1', fam: 'harvest', rare: 'starter', src: 's3r5', family: '花開羊駝', element: '自然・花',
     names: ['花花羊駝', '玫瑰羊駝', '花冠女王'], en: ['Petali', 'Roselamb', 'Bloompress'],
@@ -55,7 +55,7 @@ const SPECIES = [
     concept: '能讓空氣結晶成冰的海豹狼，負責把庫存保持在最新鮮的狀態，最終背負極光。' },
   { id: 'h4', fam: 'harvest', rare: 'legend', src: 's1r1', family: '森靈貓', element: '草・自然',
     names: ['苔苔貓', '荊棘貓', '森林之王'], en: ['Mosskit', 'Thornpounce', 'Verdant Rex'],
-    concept: '與森林一起長大的貓狐，身上纏繞著活生生的植物，是豐收系的傳說店寵。' },
+    concept: '與森林一起長大的貓狐，身上纏繞著活生生的植物，是豐收系的傳說角色。' },
   /* 親和系 */
   { id: 'k1', fam: 'kind', rare: 'starter', src: 's1r3', family: '水精螈', element: '水',
     names: ['泡泡螈', '浪花螈', '海神螈'], en: ['Bubblit', 'Tideroo', 'Leviaplush'],
@@ -68,7 +68,7 @@ const SPECIES = [
     concept: '溫柔漂浮的水母精靈，提著燈籠為迷路的人引路，就像主動協助顧客的夥伴。' },
   { id: 'k4', fam: 'kind', rare: 'legend', src: 's2r1', family: '天幕風兔', element: '風・天空',
     names: ['風風兔', '疾風兔', '天嵐神狐'], en: ['Breebit', 'Galehare', 'Tempestra'],
-    concept: '乘著風奔跑的兔狐，輕盈的身體能聚集風暴之力，是親和系的傳說店寵。' },
+    concept: '乘著風奔跑的兔狐，輕盈的身體能聚集風暴之力，是親和系的傳說角色。' },
   /* 智慧系 */
   { id: 'w1', fam: 'wise', rare: 'starter', src: 's3r3', family: '靈視鴞貓', element: '超能・靈',
     names: ['咕咕鴞貓', '心靈鴞', '先知神鴞'], en: ['Hootle', 'Mindowl', 'Oracleon'],
@@ -81,12 +81,20 @@ const SPECIES = [
     concept: '聰明又愛玩的小虎鯨，最終成為駕馭風暴的鯨王。' },
   { id: 'w4', fam: 'wise', rare: 'legend', src: 's2r3', family: '光輝靈鹿', element: '光・星辰',
     names: ['光光鹿', '日輝鹿', '星角聖鹿'], en: ['Lumini', 'Solara', 'Astrahorn'],
-    concept: '鹿角能引導陽光與星辰祝福的靈鹿，是智慧系的傳說店寵。' },
+    concept: '鹿角能引導陽光與星辰祝福的靈鹿，是智慧系的傳說角色。' },
 ];
+/* 門市共養寵物（店寵）：全店一起養的唯一神獸，四階進化。原畫：source/store-dragon.png */
+const STORE_PET = {
+  id: 'sp', rare: 'divine', family: '天穹龍', element: '天穹・星光',
+  names: ['星龍幼體', '天輝龍', '穹光龍皇', '天穹龍帝・埃爾德拉'], en: ['Starling', 'Celestine', 'Vaultlight', 'Eldra, Emperor of the Heavenly Void'],
+  unlock: ['全店完成 10 個任務孵化', '店寵 Lv.5', '店寵 Lv.12', '店寵 Lv.20 完全進化'],
+  concept: '傳說中守護天空神殿的龍。每家門市只有一隻，由全店夥伴一起完成任務、餵食、陪伴養大。從白金色的幼龍，一路長成展開紫晶雙翼的天穹龍帝。',
+  card: n => `${BASE}creatures/sp-${n}-card.jpg`,
+};
 const BY_ID = Object.fromEntries(SPECIES.map(s => [s.id, s]));
 let BASE = (root.ROSTER_BASE !== undefined) ? root.ROSTER_BASE : '';
 const img = (id, stage) => `${BASE}creatures/${id}-${stage}.png`;
 const tag = (id, stage, o = {}) => { const s = BY_ID[id]; return `<img src="${img(id, stage)}" alt="${s ? s.names[stage - 1] : ''}" class="${o.cls || 'roster-img'}" loading="lazy" draggable="false">`; };
 const svgImage = (id, stage, x, y, w, h) => `<image href="${img(id, stage)}" x="${x}" y="${y}" width="${w}" height="${h || w}" preserveAspectRatio="xMidYMax meet"/>`;
-root.Roster = { FAMILIES, RARITY, SPECIES, byId: id => BY_ID[id], img, tag, svgImage, setBase: b => { BASE = b; } };
+root.Roster = { FAMILIES, RARITY, SPECIES, STORE_PET, byId: id => BY_ID[id], img, tag, svgImage, setBase: b => { BASE = b; } };
 })(typeof window !== 'undefined' ? window : globalThis);

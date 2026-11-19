@@ -42,6 +42,17 @@ header p{color:var(--sub);margin:10px 0 0}
 table{width:100%;border-collapse:collapse;background:#FFFDF9;border-radius:20px;overflow:hidden;border:1px solid var(--line);font-size:14px}
 th,td{padding:11px 14px;text-align:left;border-bottom:1px solid var(--line);vertical-align:top;line-height:1.55}
 th{background:#F1E6D6;font-size:13px}
+.store{margin-top:30px;padding:24px;border-radius:30px;background:linear-gradient(160deg,#1E1B44,#3B2D6E 55%,#5A3F86);color:#fff;box-shadow:0 14px 40px rgba(40,20,80,.25)}
+.store-hd h2{margin:8px 0 2px;font-size:30px;color:#FFE7A6;letter-spacing:2px}
+.store-hd p{margin:0;color:#CFC4F0;font-size:14px}
+.store-hd .badge{margin:0}
+.store-row{display:grid;grid-template-columns:.8fr 1fr 1.1fr 1.35fr;gap:12px;margin-top:16px;align-items:end}
+.sc{text-align:center}
+.sc .ph{border-radius:18px;overflow:hidden;border:2px solid rgba(255,220,140,.55);box-shadow:0 8px 20px rgba(0,0,0,.3);line-height:0}
+.sc img{width:100%;display:block}
+.sc b{display:block;margin-top:8px;font-size:15px;color:#FFE7A6}
+.sc small{display:block;color:#CFC4F0;font-size:12px;margin-top:2px}
+.sp-desc{margin:16px 0 0;color:#E6DEFF;font-size:14px;line-height:1.7}
 .credit{margin-top:30px;text-align:center;color:var(--sub);font-size:12px}
 @media(max-width:760px){.stages{grid-template-columns:1fr}.st:not(:last-child):after{content:"↓";right:50%;top:auto;bottom:-14px}.final{grid-template-columns:repeat(2,1fr)}}
 </style>
@@ -53,7 +64,11 @@ th{background:#F1E6D6;font-size:13px}
 const R = window.Roster;
 const FBG = {guard:'#E6EEFB',mech:'#FBEBDD',harvest:'#E3F3E6',kind:'#FBE6EE',wise:'#ECE6FA'};
 const STAGE = ['幼年期・孵化','成長期・Lv.5','完全體・Lv.12'];
-let h = `<header><h1>糰糰夥伴 角色設定集</h1><p>20 個家族・5 系 × 4 種・每種 3 階段進化（共 60 個型態）</p></header>`;
+const SP = R.STORE_PET;
+let h = `<header><h1>糰糰夥伴 角色設定集</h1><p>門市共養神獸 1 隻（四階進化）＋ 個人夥伴 20 個家族（5 系 × 4 種・三階進化）</p></header>
+<section class="store" id="store-pet"><div class="store-hd"><span class="badge" style="background:${R.RARITY.divine.color}">${R.RARITY.divine.name}</span><h2>${SP.names[3]}</h2><p>${SP.en[3]}</p></div>
+<div class="store-row">${[1,2,3,4].map(n => `<div class="sc"><div class="ph"><img src="${SP.card(n)}" alt="${SP.names[n-1]}"></div><b>第 ${n} 階・${SP.names[n-1]}</b><small>${SP.unlock[n-1]}</small></div>`).join('')}</div>
+<p class="sp-desc">${SP.concept}</p></section>`;
 for (const [fid, f] of Object.entries(R.FAMILIES)) {
   h += `<section class="fam" id="fam-${fid}" style="--fc:${f.color};--fbg:${FBG[fid]}"><div class="fam-hd"><div class="ic">${f.icon}</div><div><h2>${f.name}</h2><p>對應任務：${f.desc}</p></div></div>`;
   for (const sp of R.SPECIES.filter(x => x.fam === fid)) {
@@ -72,10 +87,11 @@ h += `<section class="sec" id="plan"><h2>放進遊戲的規劃</h2><p class="lea
 <tr><td><b>第一隻夥伴</b></td><td>新夥伴從 5 隻初始角色選 1 隻：鉚釘龜／小工浣熊／花花羊駝／泡泡螈／咕咕鴞貓。</td></tr>
 <tr><td><b>之後的蛋</b></td><td>寵物畢業後，可從培育過的系別選普通蛋。連續達成 14 天 → 稀有蛋。夾娃娃機有小機率夾到稀有蛋。每週團隊挑戰 → 蛋券。</td></tr>
 <tr><td><b>進化條件</b></td><td>成長期：Lv.5。完全體：Lv.12，且自己系別的任務屬性要佔 30% 以上。條件不足時，提示「再多做 XX 任務就能進化」。</td></tr>
-<tr><td><b>店寵（傳說）</b></td><td>門市共養寵物孵化時，依全店最常做的任務系別，孵出該系的傳說角色：沙丘鼴獅／火山角羊蜥／森靈貓／天幕風兔／光輝靈鹿。</td></tr>
-<tr><td><b>圖鑑規模</b></td><td>個人 15 個家族 × 3 階段 = 45 個型態，加上店寵 5 × 3 = 15 個型態。</td></tr>
+<tr><td><b>店寵（神獸）</b></td><td>每家門市一隻<b>天穹龍</b>，全店一起養。全店完成 10 個任務孵化 → Lv.5 天輝龍 → Lv.12 穹光龍皇 → Lv.20 完全進化為天穹龍帝・埃爾德拉。牧場也跟著龍的階段一起成長。</td></tr>
+<tr><td><b>傳說角色</b></td><td>沙丘鼴獅／火山角羊蜥／森靈貓／天幕風兔／光輝靈鹿，開放給個人收集。取得方式：同一系的初始、普通、稀有角色都培育到完全體後，解鎖該系傳說蛋。</td></tr>
+<tr><td><b>圖鑑規模</b></td><td>個人 20 個家族 × 3 階段 = 60 個型態，加上店寵 4 個階段。</td></tr>
 </table></section>
-<p class="credit">角色原畫：設定稿 Creature Roster Sheet 1–4（pet/art/source）。中文名稱與系別分配為遊戲用暫定，可再調整。</p>`;
+<p class="credit">角色原畫：Creature Roster Sheet 1–4、天穹龍帝宣傳圖（pet/art/source）。中文名稱與系別分配為遊戲用暫定，可再調整。</p>`;
 document.getElementById('root').innerHTML = h;
 </script>
 </body>
