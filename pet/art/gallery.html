@@ -5,103 +5,78 @@
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>糰糰夥伴 角色設定集</title>
 <style>
-:root{--bg:#FFF8F0;--ink:#2B1B3D;--sub:#857A93;--line:#F0E4D6;--card:#fff}
+:root{--bg:#F7F1E8;--ink:#3A2A2E;--sub:#8A7B70;--line:#E6D9C8}
 *{box-sizing:border-box}
-body{margin:0;background:var(--bg);color:var(--ink);font-family:-apple-system,BlinkMacSystemFont,"PingFang TC","Noto Sans TC","Microsoft JhengHei",sans-serif;-webkit-font-smoothing:antialiased}
-.wrap{max-width:1180px;margin:0 auto;padding:40px 24px 80px}
-header{text-align:center;padding:20px 0 10px}
-header h1{font-size:40px;margin:0;letter-spacing:4px}
-header p{color:var(--sub);margin:10px 0 0;font-size:16px}
-.principles{display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin:30px 0 10px}
-.principles div{background:#fff;border-radius:20px;padding:16px 18px;box-shadow:0 6px 20px rgba(90,60,40,.06);font-size:14px;line-height:1.6}
-.principles b{display:block;font-size:15px;margin-bottom:4px}
-.fam{margin-top:46px;padding:26px;border-radius:32px;background:var(--fbg)}
-.fam-hd{display:flex;align-items:center;gap:14px;margin-bottom:18px}
-.fam-hd .ic{width:54px;height:54px;border-radius:18px;display:grid;place-items:center;font-size:28px;background:#fff;box-shadow:0 4px 12px rgba(0,0,0,.06)}
+body{margin:0;background:var(--bg);color:var(--ink);font-family:-apple-system,BlinkMacSystemFont,"PingFang TC","Noto Sans TC","Microsoft JhengHei",serif;-webkit-font-smoothing:antialiased}
+.wrap{max-width:1240px;margin:0 auto;padding:36px 24px 80px}
+header{text-align:center}
+header h1{font-size:38px;margin:0;letter-spacing:4px}
+header p{color:var(--sub);margin:10px 0 0}
+.fam{margin-top:40px;padding:22px 22px 8px;border-radius:30px;background:linear-gradient(180deg,var(--fbg),#FFFDF9 220px);border:1px solid var(--line)}
+.fam-hd{display:flex;align-items:center;gap:14px;margin-bottom:6px}
+.fam-hd .ic{width:52px;height:52px;border-radius:16px;display:grid;place-items:center;font-size:26px;background:#fff;box-shadow:0 4px 12px rgba(0,0,0,.06)}
 .fam-hd h2{margin:0;font-size:26px;color:var(--fc)}
 .fam-hd p{margin:2px 0 0;color:var(--sub);font-size:14px}
-.sp{background:#fff;border-radius:26px;padding:18px 20px 16px;margin-top:16px;box-shadow:0 8px 24px rgba(90,60,40,.07)}
-.sp-hd{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
-.no{font-weight:900;color:#fff;background:var(--fc);border-radius:10px;padding:3px 9px;font-size:13px}
+.sp{background:#FFFDF9;border-radius:24px;padding:14px 18px 14px;margin:14px 0;border:1px solid var(--line);box-shadow:0 6px 18px rgba(90,60,40,.05)}
+.sp-hd{display:flex;align-items:baseline;gap:10px;flex-wrap:wrap}
 .sp-hd h3{margin:0;font-size:20px}
-.sp-hd .chain{color:var(--sub);font-weight:700;font-size:14px}
-.badge{margin-left:auto;font-size:12px;font-weight:900;padding:4px 12px;border-radius:999px;color:#fff}
-.stages{display:grid;grid-template-columns:repeat(3,1fr);gap:14px;margin-top:12px;position:relative}
-.st{background:linear-gradient(180deg,var(--fbg),#fff 70%);border-radius:20px;padding:10px 12px 14px;text-align:center;position:relative}
-.st:not(:last-child):after{content:"➜";position:absolute;right:-14px;top:110px;font-size:18px;color:var(--fc);z-index:2}
-.st .art{width:100%;max-width:220px;aspect-ratio:1;margin:0 auto}
-.st .art svg{width:100%;height:100%;overflow:visible}
-.st .lv{display:inline-block;font-size:11px;font-weight:900;color:var(--fc);background:#fff;border-radius:999px;padding:2px 10px;border:2px solid var(--fbg)}
-.st b{display:block;font-size:18px;margin:6px 0 4px}
-.st p{margin:0;font-size:13px;color:var(--sub);line-height:1.55}
-.sp-ft{display:flex;gap:16px;margin-top:12px;font-size:13px;line-height:1.6;color:#5A4E66;align-items:flex-start}
-.sp-ft .c{flex:1}
-.sp-ft .m{flex:none;background:var(--fbg);border-radius:12px;padding:6px 12px;font-weight:800;color:var(--fc)}
-.eggs{display:grid;grid-template-columns:repeat(5,1fr);gap:14px;margin-top:16px}
-.eggs div{background:#fff;border-radius:22px;padding:10px;text-align:center;font-weight:900;box-shadow:0 6px 20px rgba(90,60,40,.06)}
-.eggs svg{width:100%;max-width:150px}
-.sec{margin-top:56px}
-.sec h2{font-size:28px;margin:0 0 6px}
-.sec .lead{color:var(--sub);margin:0 0 16px}
-table{width:100%;border-collapse:collapse;background:#fff;border-radius:20px;overflow:hidden;box-shadow:0 6px 20px rgba(90,60,40,.06);font-size:14px}
-th,td{padding:12px 14px;text-align:left;border-bottom:1px solid var(--line);vertical-align:top;line-height:1.55}
-th{background:#FBF1E6;font-size:13px}
-.final{display:grid;grid-template-columns:repeat(5,1fr);gap:12px}
-.final div{background:#fff;border-radius:20px;padding:6px 6px 12px;text-align:center;box-shadow:0 6px 20px rgba(90,60,40,.06)}
-.final svg{width:100%}
-.final b{display:block;font-size:14px}
+.sp-hd .el{font-size:13px;color:var(--sub);font-weight:700}
+.badge{margin-left:auto;font-size:12px;font-weight:900;padding:4px 12px;border-radius:999px;color:#fff;align-self:center}
+.stages{display:grid;grid-template-columns:1fr 1.35fr 1.9fr;gap:10px;margin-top:8px;align-items:end}
+.st{text-align:center;position:relative}
+.st:not(:last-child):after{content:"→";position:absolute;right:-12px;top:70px;font-size:20px;color:#A08C7A}
+.st .art{height:170px;display:flex;align-items:flex-end;justify-content:center}
+.st .art img{max-width:100%;max-height:170px;object-fit:contain;filter:drop-shadow(0 6px 6px rgba(60,40,20,.12))}
+.st b{display:block;font-size:17px;margin-top:6px}
+.st small{display:block;color:var(--sub);font-size:12px;font-weight:700;margin-top:1px}
+.sp-ft{margin-top:10px;font-size:13.5px;line-height:1.65;color:#5E4E46}
+.final{display:grid;grid-template-columns:repeat(4,1fr);gap:12px}
+.final>div{background:#FFFDF9;border:1px solid var(--line);border-radius:20px;padding:10px 8px 12px;text-align:center}
+.final .art{height:120px;display:flex;align-items:flex-end;justify-content:center}
+.final img{max-width:100%;max-height:120px;object-fit:contain}
+.final b{display:block;font-size:14px;margin-top:6px}
 .final span{font-size:11px;font-weight:800}
-.cr-body{transform-box:fill-box;transform-origin:50% 100%;animation:idle 2.8s ease-in-out infinite}
-.cr-float .cr-body{animation:hover 3.2s ease-in-out infinite}
-.cr-spark{animation:tw 2s ease-in-out infinite}
-.cr-blink{animation:tw 1s steps(2) infinite}
-@keyframes idle{50%{transform:scale(1.025,.975)}}
-@keyframes hover{50%{transform:translateY(-6px)}}
-@keyframes tw{50%{opacity:.3}}
-.static .cr-body,.static .cr-spark,.static .cr-blink{animation:none!important}
-@media(max-width:760px){.principles{grid-template-columns:1fr 1fr}.stages{grid-template-columns:1fr}.st:not(:last-child):after{content:"⬇";right:50%;top:auto;bottom:-16px}.eggs,.final{grid-template-columns:repeat(2,1fr)}}
+.sec{margin-top:48px}
+.sec h2{font-size:26px;margin:0 0 6px}
+.sec .lead{color:var(--sub);margin:0 0 16px;line-height:1.6}
+table{width:100%;border-collapse:collapse;background:#FFFDF9;border-radius:20px;overflow:hidden;border:1px solid var(--line);font-size:14px}
+th,td{padding:11px 14px;text-align:left;border-bottom:1px solid var(--line);vertical-align:top;line-height:1.55}
+th{background:#F1E6D6;font-size:13px}
+.credit{margin-top:30px;text-align:center;color:var(--sub);font-size:12px}
+@media(max-width:760px){.stages{grid-template-columns:1fr}.st:not(:last-child):after{content:"↓";right:50%;top:auto;bottom:-14px}.final{grid-template-columns:repeat(2,1fr)}}
 </style>
 </head>
 <body>
 <div class="wrap" id="root"></div>
-<script src="creatures.js"></script>
+<script src="roster.js"></script>
 <script>
-const C = window.Creatures;
-const FBG = {guard:'#EAF2FF',mech:'#FFF0E0',harvest:'#E6F7EC',kind:'#FFEAF2',wise:'#F0EBFF'};
-const STAGE = [['幼年期','孵化'],['成長期','Lv.5'],['完全體','Lv.12']];
-let html = `<header><h1>糰糰夥伴 角色設定集</h1><p>20 種原創夥伴寵物・5 系 × 4 種・每種 3 階段進化（共 60 個型態）</p></header>
-<div class="principles">
-  <div><b>🎯 一眼認得的剪影</b>每隻都有一個主記憶點，看輪廓就知道是誰。</div>
-  <div><b>🌱 進化＝記憶點長大</b>同一個特徵逐階段放大，例如鎖頭吊飾 → 鎖頭尾巴 → 金庫門鬃毛。</div>
-  <div><b>📐 三段比例</b>幼年期大頭圓滾；成長期四肢伸展；完全體姿態威風，背後有光環。</div>
-  <div><b>🏪 取材自門市</b>夾爪、扭蛋、鐵捲門、兌幣機……全部是原創，有自家品牌的味道。</div>
-</div>`;
-let no = 1;
-for (const [fid, f] of Object.entries(C.FAMILIES)) {
-  html += `<section class="fam" id="fam-${fid}" style="--fc:${f.color};--fbg:${FBG[fid]}"><div class="fam-hd"><div class="ic">${f.icon}</div><div><h2>${f.name}</h2><p>對應任務：${f.desc}　｜　主題元素：${f.motif}</p></div></div>`;
-  for (const sp of C.SPECIES.filter(x => x.fam === fid)) {
-    const r = C.RARITY[sp.rare];
-    html += `<div class="sp" id="sp-${sp.id}"><div class="sp-hd"><span class="no">No.${String(no++).padStart(2,'0')}</span><h3>${sp.names[0]}</h3><span class="chain">${sp.names.join(' → ')}</span><span class="badge" style="background:${r.color}">${r.name}</span></div>
-      <div class="stages">${[1,2,3].map(st => `<div class="st"><div class="art">${C.draw(sp.id, st)}</div><span class="lv">${STAGE[st-1][0]}・${STAGE[st-1][1]}</span><b>${sp.names[st-1]}</b><p>${sp.stages[st-1]}</p></div>`).join('')}</div>
-      <div class="sp-ft"><div class="c">${sp.concept}</div><div class="m">記憶點：${sp.motif}</div></div></div>`;
+const R = window.Roster;
+const FBG = {guard:'#E6EEFB',mech:'#FBEBDD',harvest:'#E3F3E6',kind:'#FBE6EE',wise:'#ECE6FA'};
+const STAGE = ['幼年期・孵化','成長期・Lv.5','完全體・Lv.12'];
+let h = `<header><h1>糰糰夥伴 角色設定集</h1><p>20 個家族・5 系 × 4 種・每種 3 階段進化（共 60 個型態）</p></header>`;
+for (const [fid, f] of Object.entries(R.FAMILIES)) {
+  h += `<section class="fam" id="fam-${fid}" style="--fc:${f.color};--fbg:${FBG[fid]}"><div class="fam-hd"><div class="ic">${f.icon}</div><div><h2>${f.name}</h2><p>對應任務：${f.desc}</p></div></div>`;
+  for (const sp of R.SPECIES.filter(x => x.fam === fid)) {
+    const r = R.RARITY[sp.rare];
+    h += `<div class="sp" id="sp-${sp.id}"><div class="sp-hd"><h3>${sp.family}</h3><span class="el">${sp.element}</span><span class="badge" style="background:${r.color}">${r.name}</span></div>
+      <div class="stages">${[1,2,3].map(st => `<div class="st"><div class="art">${R.tag(sp.id, st)}</div><b>${sp.names[st-1]}</b><small>${STAGE[st-1]}・${sp.en[st-1]}</small></div>`).join('')}</div>
+      <div class="sp-ft">${sp.concept}</div></div>`;
   }
-  html += `</section>`;
+  h += `</section>`;
 }
-html += `<section class="sec" id="eggs"><h2>系別蛋</h2><p class="lead">每一系一款蛋，從花紋就看得出會孵出哪一系的夥伴。</p><div class="eggs">${Object.entries(C.FAMILIES).map(([fid,f]) => `<div>${C.egg(fid)}<br>${f.name}之蛋</div>`).join('')}</div></section>`;
-html += `<section class="sec" id="finals"><h2>完全體一覽</h2><p class="lead">20 種夥伴的最終型態。</p><div class="final">${C.SPECIES.map(sp => `<div>${C.draw(sp.id,3)}<b>${sp.names[2]}</b><span style="color:${C.RARITY[sp.rare].color}">${C.FAMILIES[sp.fam].name}・${C.RARITY[sp.rare].name}</span></div>`).join('')}</div></section>`;
-html += `<section class="sec" id="plan"><h2>放進遊戲的規劃</h2><p class="lead">20 種角色怎麼取得、怎麼進化、怎麼讓人一直想收集。</p>
+h += `<section class="sec" id="finals"><h2>完全體一覽</h2><p class="lead">20 個家族的最終型態。</p><div class="final">${R.SPECIES.map(sp => `<div><div class="art">${R.tag(sp.id,3)}</div><b>${sp.names[2]}</b><span style="color:${R.RARITY[sp.rare].color}">${R.FAMILIES[sp.fam].name}・${R.RARITY[sp.rare].name}</span></div>`).join('')}</div></section>`;
+h += `<section class="sec" id="plan"><h2>放進遊戲的規劃</h2><p class="lead">20 個家族怎麼取得、怎麼進化。</p>
 <table>
 <tr><th style="width:150px">項目</th><th>規則</th></tr>
-<tr><td><b>稀有度分佈</b></td><td>每系 4 種：<b>初始</b> 1・<b>普通</b> 1・<b>稀有</b> 1・<b>傳說</b> 1。傳說 5 種只給「門市共養店寵」，個人可收集 15 種。</td></tr>
-<tr><td><b>第一隻夥伴</b></td><td>新夥伴從 5 顆初始蛋選 1 顆：鎖喵／小夾蟹／芽芽蝟／棉棉兔／眼眼鴞。</td></tr>
-<tr><td><b>之後的蛋</b></td><td>寵物畢業 → 從「已培育過的系別」任選一顆普通蛋。<br>連續達成 14 天 → 稀有蛋 1 顆。<br>夾娃娃機 → 小機率夾到稀有蛋。<br>每週團隊挑戰 → 蛋券。</td></tr>
-<tr><td><b>進化條件</b></td><td><b>成長期</b>：Lv.5。<br><b>完全體</b>：Lv.12，而且<b>自己系別的任務屬性要佔 30% 以上</b>。例如機械系要多做機台清潔、夾力測試。條件不足時會提示「再多做 XX 任務就能進化」，把遊戲和工作連在一起。</td></tr>
-<tr><td><b>異色版本</b></td><td>完全體時連續達成 21 天以上 → 進化成異色（顏色不同的稀有版本），圖鑑另外登錄。</td></tr>
-<tr><td><b>店寵</b></td><td>門市共養寵物孵化時，依全店最常做的任務系別，孵出該系的傳說角色（捲捲／機寶／小穗鹿／泡泡鯨／小星駒）。每家店會因為團隊風格不同，養出不一樣的傳說。</td></tr>
-<tr><td><b>圖鑑規模</b></td><td>15 種 × 3 階段 = 45 個個人型態，加上 5 種傳說 × 3 階段 = 15 個店寵型態，再加異色版本。一隻約 5 週畢業，收集完全部個人角色需要一年以上，提供長期目標。</td></tr>
-</table></section>`;
-document.getElementById('root').innerHTML = html;
-if (location.hash === '#static') document.body.classList.add('static');
+<tr><td><b>系別分配</b></td><td>依角色氣質對應任務類型。<b>守護</b>：鋼殼龜、石英甲蟲、影月貓、沙丘鼴獅。<b>機械</b>：發明家浣熊、焰鱗穿山甲、雷暴猞猁、火山角羊蜥。<b>豐收</b>：花開羊駝、毒鱗變色龍、霜行冰狼、森靈貓。<b>親和</b>：水精螈、音律羚、幽靈水母、天幕風兔。<b>智慧</b>：靈視鴞貓、晶晶守宮龍、風暴虎鯨、光輝靈鹿。</td></tr>
+<tr><td><b>第一隻夥伴</b></td><td>新夥伴從 5 隻初始角色選 1 隻：鉚釘龜／小工浣熊／花花羊駝／泡泡螈／咕咕鴞貓。</td></tr>
+<tr><td><b>之後的蛋</b></td><td>寵物畢業後，可從培育過的系別選普通蛋。連續達成 14 天 → 稀有蛋。夾娃娃機有小機率夾到稀有蛋。每週團隊挑戰 → 蛋券。</td></tr>
+<tr><td><b>進化條件</b></td><td>成長期：Lv.5。完全體：Lv.12，且自己系別的任務屬性要佔 30% 以上。條件不足時，提示「再多做 XX 任務就能進化」。</td></tr>
+<tr><td><b>店寵（傳說）</b></td><td>門市共養寵物孵化時，依全店最常做的任務系別，孵出該系的傳說角色：沙丘鼴獅／火山角羊蜥／森靈貓／天幕風兔／光輝靈鹿。</td></tr>
+<tr><td><b>圖鑑規模</b></td><td>個人 15 個家族 × 3 階段 = 45 個型態，加上店寵 5 × 3 = 15 個型態。</td></tr>
+</table></section>
+<p class="credit">角色原畫：設定稿 Creature Roster Sheet 1–4（pet/art/source）。中文名稱與系別分配為遊戲用暫定，可再調整。</p>`;
+document.getElementById('root').innerHTML = h;
 </script>
 </body>
 </html>
