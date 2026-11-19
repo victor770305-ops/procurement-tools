@@ -1,0 +1,1172 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover,maximum-scale=1">
+<meta name="theme-color" content="#FFF6EC">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<title>糰糰夥伴</title>
+<style>
+:root{
+  --bg:#FFF6EC;--card:#fff;--ink:#3A2E4A;--sub:#8E839C;--line:#F1E7DB;
+  --pri:#FF7A59;--pri2:#FFA94D;--ok:#35B57A;--warn:#FF6B6B;
+  --guard:#5B8DEF;--mech:#F2A23B;--harvest:#36B368;--kind:#F06A9B;--wise:#8C6CF0;
+  --r:22px;--sh:0 8px 24px rgba(110,70,40,.08);
+}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+html,body{margin:0;background:#EDE3D6;color:var(--ink);font-family:-apple-system,BlinkMacSystemFont,"PingFang TC","Noto Sans TC","Microsoft JhengHei",sans-serif;-webkit-font-smoothing:antialiased}
+button{font:inherit;color:inherit;border:0;background:none;cursor:pointer}
+input,select{font:inherit;color:inherit}
+#app{max-width:480px;margin:0 auto;min-height:100vh;min-height:100dvh;background:var(--bg);position:relative;padding-bottom:calc(88px + env(safe-area-inset-bottom));overflow-x:hidden}
+.hidden{display:none!important}
+
+/* ---------- top bar ---------- */
+.topbar{position:sticky;top:0;z-index:20;display:flex;align-items:center;gap:10px;padding:calc(10px + env(safe-area-inset-top)) 16px 10px;background:rgba(255,246,236,.92);backdrop-filter:blur(10px)}
+.tb-pet{width:42px;height:42px;border-radius:14px;background:#fff;box-shadow:var(--sh);display:grid;place-items:center;overflow:hidden}
+.tb-pet svg{width:40px;height:40px}
+.tb-info{flex:1;min-width:0}
+.tb-name{font-weight:800;font-size:15px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.tb-lv{display:flex;align-items:center;gap:6px;font-size:11px;color:var(--sub);margin-top:3px}
+.xpbar{flex:1;height:6px;border-radius:6px;background:#F0E3D4;overflow:hidden;max-width:110px}
+.xpbar i{display:block;height:100%;background:linear-gradient(90deg,var(--pri2),var(--pri));border-radius:6px;transition:width .6s}
+.pills{display:flex;gap:6px}
+.pill{display:flex;align-items:center;gap:4px;background:#fff;border-radius:999px;padding:6px 10px 6px 8px;font-weight:800;font-size:13px;box-shadow:var(--sh)}
+.pill.bump{animation:bump .5s}
+@keyframes bump{40%{transform:scale(1.25)}}
+.gear{width:36px;height:36px;border-radius:12px;background:#fff;box-shadow:var(--sh);display:grid;place-items:center}
+
+/* ---------- nav ---------- */
+.nav{position:fixed;bottom:0;left:50%;transform:translateX(-50%);width:100%;max-width:480px;z-index:30;display:flex;justify-content:space-around;padding:8px 8px calc(8px + env(safe-area-inset-bottom));background:rgba(255,255,255,.95);backdrop-filter:blur(12px);border-top:1px solid var(--line);border-radius:22px 22px 0 0;box-shadow:0 -6px 24px rgba(110,70,40,.06)}
+.nav button{flex:1;display:flex;flex-direction:column;align-items:center;gap:3px;padding:6px 0;font-size:11px;font-weight:700;color:#B3A8BF;position:relative}
+.nav button svg{width:24px;height:24px;stroke:currentColor;fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
+.nav button.on{color:var(--pri)}
+.nav button.on:after{content:"";position:absolute;top:-8px;width:26px;height:4px;border-radius:4px;background:var(--pri)}
+.nav .dot{position:absolute;top:3px;right:calc(50% - 18px);width:9px;height:9px;border-radius:50%;background:var(--warn);border:2px solid #fff}
+
+/* ---------- generic ---------- */
+.page{padding:0 16px 16px;animation:fade .3s}
+@keyframes fade{from{opacity:0;transform:translateY(6px)}}
+.card{background:var(--card);border-radius:var(--r);box-shadow:var(--sh);padding:16px;margin-top:14px}
+.h{font-size:17px;font-weight:900;margin:22px 2px 4px;display:flex;align-items:center;gap:8px}
+.h small{font-size:12px;color:var(--sub);font-weight:600;margin-left:auto}
+.sub{color:var(--sub);font-size:13px}
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:6px;padding:13px 18px;border-radius:16px;font-weight:800;font-size:15px;background:#F4ECE2;transition:transform .1s}
+.btn:active{transform:scale(.96)}
+.btn.pri{background:linear-gradient(135deg,var(--pri2),var(--pri));color:#fff;box-shadow:0 6px 16px rgba(255,122,89,.35)}
+.btn.ok{background:var(--ok);color:#fff}
+.btn.block{display:flex;width:100%}
+.btn:disabled{opacity:.4;box-shadow:none}
+.tag{display:inline-flex;align-items:center;gap:3px;font-size:11px;font-weight:800;padding:3px 8px;border-radius:999px;background:#F4ECE2;color:#7A6E88}
+.chip{display:inline-flex;align-items:center;gap:2px;font-size:12px;font-weight:800;padding:2px 7px;border-radius:8px;background:#FFF4E6;color:#C26A2B}
+.prog{height:10px;border-radius:10px;background:#F3E8DC;overflow:hidden}
+.prog i{display:block;height:100%;border-radius:10px;background:linear-gradient(90deg,var(--pri2),var(--pri));transition:width .6s}
+
+/* ---------- room ---------- */
+.room{position:relative;height:310px;margin-top:6px;border-radius:30px;overflow:hidden;background:var(--wall,linear-gradient(#FFF1DE,#FFE5C8));box-shadow:var(--sh)}
+.room .floor{position:absolute;left:0;right:0;bottom:0;height:88px;background:repeating-linear-gradient(90deg,transparent 0 62px,rgba(120,70,30,.07) 62px 64px),linear-gradient(#EBCBA4,#DDB487);border-top:5px solid #D9AC7C}
+.room .rug{position:absolute;left:50%;bottom:16px;width:220px;height:46px;transform:translateX(-50%);border-radius:50%;background:radial-gradient(#FFD9C7 0 45%,#FFC4AB 46% 60%,#FFD9C7 61%);opacity:.85}
+.window{position:absolute;left:22px;top:22px;width:98px;height:82px;border-radius:16px;border:6px solid #fff;box-shadow:0 4px 12px rgba(0,0,0,.08);overflow:hidden;background:var(--sky)}
+.window:before,.window:after{content:"";position:absolute;background:#fff}
+.window:before{left:50%;top:0;bottom:0;width:4px;transform:translateX(-50%)}
+.window:after{top:50%;left:0;right:0;height:4px;transform:translateY(-50%)}
+.window .orb{position:absolute;right:12px;top:10px;width:24px;height:24px;border-radius:50%}
+.window .cloud{position:absolute;left:8px;bottom:12px;width:34px;height:12px;border-radius:12px;background:rgba(255,255,255,.85);animation:cloud 14s linear infinite}
+@keyframes cloud{from{transform:translateX(-30px)}to{transform:translateX(100px)}}
+.deco{position:absolute;line-height:1;filter:drop-shadow(0 4px 4px rgba(0,0,0,.12));transition:transform .2s}
+.deco.wall{right:28px;top:30px;font-size:46px}
+.deco.left{left:18px;bottom:58px;font-size:60px}
+.deco.right{right:18px;bottom:58px;font-size:52px}
+.deco.flag{left:136px;top:24px;font-size:34px}
+.pet-wrap{position:absolute;left:50%;bottom:18px;width:210px;height:210px;transform:translateX(-50%);cursor:pointer;z-index:3}
+.pet-wrap svg{width:100%;height:100%;overflow:visible}
+.speech{position:absolute;left:50%;top:26px;transform:translateX(-50%) scale(.6);opacity:0;background:#fff;border-radius:18px;padding:9px 14px;font-size:14px;font-weight:700;box-shadow:var(--sh);white-space:nowrap;transition:.25s;z-index:5;pointer-events:none}
+.speech.on{opacity:1;transform:translateX(-50%) scale(1)}
+.speech:after{content:"";position:absolute;left:50%;bottom:-7px;margin-left:-7px;border:7px solid transparent;border-bottom:0;border-top-color:#fff}
+.need{position:absolute;left:calc(50% + 62px);top:96px;z-index:4;background:#fff;border-radius:50%;width:44px;height:44px;display:grid;place-items:center;font-size:22px;box-shadow:var(--sh);animation:float 2s ease-in-out infinite}
+.need:before{content:"";position:absolute;left:-8px;bottom:-4px;width:12px;height:12px;border-radius:50%;background:#fff}
+@keyframes float{50%{transform:translateY(-6px)}}
+.dust{position:absolute;bottom:22px;font-size:20px;opacity:.55;z-index:4;animation:float 3s ease-in-out infinite}
+.zzz{position:absolute;left:calc(50% + 40px);top:80px;z-index:4;font-weight:900;color:#7C83C9;font-size:22px;animation:zzz 2.4s ease-in infinite}
+@keyframes zzz{0%{opacity:0;transform:translate(0,10px) scale(.6)}40%{opacity:1}100%{opacity:0;transform:translate(24px,-30px) scale(1.2)}}
+.room.night:after{content:"";position:absolute;inset:0;background:rgba(30,30,80,.18);pointer-events:none}
+.fx{position:absolute;pointer-events:none;z-index:6;font-size:24px;animation:rise 1.2s ease-out forwards}
+@keyframes rise{0%{opacity:0;transform:translateY(0) scale(.5)}20%{opacity:1;transform:translateY(-10px) scale(1.1)}100%{opacity:0;transform:translateY(-90px) scale(1)}}
+
+/* pet svg animation */
+.pet-svg .body{transform-box:fill-box;transform-origin:50% 100%;animation:idle 2.6s ease-in-out infinite}
+.pet-svg.sad .body{animation-duration:4s}
+.pet-svg.sleep .body{animation:breath 3.6s ease-in-out infinite}
+.pet-svg .eyes{transform-box:fill-box;transform-origin:center;animation:blink 5s infinite}
+.pet-svg .bulb{animation:bulb 1.4s infinite}
+.pet-svg .star{animation:twinkle 1.8s infinite}
+.pet-svg .star:nth-child(2n){animation-delay:.6s}
+.pet-svg.egg .body{animation:wobble 3s ease-in-out infinite}
+@keyframes idle{0%,100%{transform:scale(1,1)}50%{transform:scale(1.035,.965)}}
+@keyframes breath{0%,100%{transform:scale(1,1)}50%{transform:scale(1.02,.98)}}
+@keyframes blink{0%,93%,100%{transform:scaleY(1)}96%{transform:scaleY(.1)}}
+@keyframes bulb{50%{opacity:.35}}
+@keyframes twinkle{50%{opacity:.2}}
+@keyframes wobble{0%,70%,100%{transform:rotate(0)}76%{transform:rotate(-6deg)}84%{transform:rotate(5deg)}92%{transform:rotate(-3deg)}}
+.pet-wrap.jump .body{animation:jump .7s ease-out}
+@keyframes jump{0%{transform:scale(1.1,.85)}35%{transform:translateY(-38px) scale(.95,1.06)}70%{transform:translateY(0) scale(1.1,.88)}100%{transform:scale(1,1)}}
+.pet-wrap.eat .body{animation:eat .35s 3}
+@keyframes eat{50%{transform:scale(1.06,.92)}}
+.sil{filter:grayscale(1) brightness(1.15) opacity(.55)}
+
+/* stats & actions */
+.stats{display:grid;grid-template-columns:1fr 1fr;gap:10px 14px}
+.stat{display:flex;align-items:center;gap:8px;font-size:12px;font-weight:800}
+.stat .ic{font-size:18px;width:24px;text-align:center}
+.stat .bar{flex:1;height:10px;border-radius:10px;background:#F3E8DC;overflow:hidden}
+.stat .bar i{display:block;height:100%;border-radius:10px;transition:width .6s}
+.stat.low .bar{animation:lowpulse 1.2s infinite}
+@keyframes lowpulse{50%{box-shadow:0 0 0 3px rgba(255,107,107,.25)}}
+.actions{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-top:14px}
+.act{display:flex;flex-direction:column;align-items:center;gap:6px;font-size:12px;font-weight:800;position:relative}
+.act .o{width:58px;height:58px;border-radius:20px;display:grid;place-items:center;font-size:27px;background:#fff;box-shadow:var(--sh);transition:transform .12s}
+.act:active .o{transform:scale(.9)}
+.act:disabled{opacity:.4}
+.act .badge{position:absolute;top:-4px;right:calc(50% - 36px);background:var(--pri);color:#fff;font-size:11px;min-width:20px;height:20px;border-radius:10px;display:grid;place-items:center;padding:0 5px;border:2px solid #fff}
+.cta{display:flex;align-items:center;gap:14px;cursor:pointer}
+.ring{--p:0;width:54px;height:54px;border-radius:50%;background:conic-gradient(var(--pri) calc(var(--p)*1%),#F3E8DC 0);display:grid;place-items:center;flex:none}
+.ring b{width:42px;height:42px;border-radius:50%;background:#fff;display:grid;place-items:center;font-size:13px;font-weight:900}
+.cta .t{flex:1}
+.cta .t b{font-size:16px}
+.arrow{font-size:20px;color:var(--sub)}
+.grad{background:linear-gradient(135deg,#FFE3A3,#FFC5A8);border:2px dashed #FF9E6E}
+
+/* tasks */
+.tsum{display:flex;gap:10px;margin-top:12px}
+.tsum .box{flex:1;background:#fff;border-radius:18px;box-shadow:var(--sh);padding:12px;text-align:center}
+.tsum .box b{display:block;font-size:22px;font-weight:900}
+.tsum .box span{font-size:11px;color:var(--sub);font-weight:700}
+.task{display:flex;align-items:center;gap:12px;background:#fff;border-radius:20px;box-shadow:var(--sh);padding:14px;margin-top:10px;cursor:pointer;transition:transform .12s;position:relative;overflow:hidden}
+.task:active{transform:scale(.98)}
+.task .ai{width:46px;height:46px;border-radius:15px;display:grid;place-items:center;font-size:22px;flex:none}
+.task .tt{flex:1;min-width:0}
+.task .tt b{display:block;font-size:15px}
+.task .rw{display:flex;gap:5px;margin-top:6px;flex-wrap:wrap}
+.task .st{flex:none;font-size:12px;font-weight:800;padding:8px 12px;border-radius:12px;background:#FFF0E8;color:var(--pri)}
+.task.done{opacity:.72}
+.task.done .st{background:#E6F7EE;color:var(--ok)}
+.task.done b{text-decoration:line-through;text-decoration-color:rgba(0,0,0,.25)}
+.task .core{position:absolute;top:0;left:0;font-size:10px;font-weight:900;color:#fff;background:var(--pri);padding:2px 8px;border-radius:0 0 10px 0}
+.chest{text-align:center;background:linear-gradient(135deg,#FFF3C4,#FFD9B8)}
+.chest .big{font-size:64px;display:inline-block;animation:shake 1.4s infinite}
+@keyframes shake{0%,60%,100%{transform:rotate(0)}70%{transform:rotate(-10deg)}80%{transform:rotate(10deg)}90%{transform:rotate(-5deg)}}
+
+/* sheet */
+.mask{position:fixed;inset:0;background:rgba(40,25,50,.4);z-index:50;opacity:0;pointer-events:none;transition:opacity .25s}
+.mask.on{opacity:1;pointer-events:auto}
+.sheet{position:fixed;left:50%;bottom:0;width:100%;max-width:480px;max-height:88vh;overflow:auto;z-index:51;background:var(--bg);border-radius:28px 28px 0 0;padding:10px 20px calc(24px + env(safe-area-inset-bottom));transform:translate(-50%,105%);transition:transform .32s cubic-bezier(.2,.9,.3,1.1)}
+.sheet:not(.on){visibility:hidden;transition:transform .32s,visibility 0s .32s}
+.sheet.on{transform:translate(-50%,0)}
+.sheet .grip{width:44px;height:5px;border-radius:5px;background:#E2D5C6;margin:0 auto 14px}
+.sheet h3{margin:4px 0 6px;font-size:20px}
+.chk{display:flex;align-items:center;gap:12px;background:#fff;border-radius:16px;padding:14px;margin-top:10px;font-weight:700;box-shadow:var(--sh);cursor:pointer}
+.chk input{appearance:none;width:24px;height:24px;border-radius:8px;border:2.5px solid #DCCFC0;display:grid;place-items:center;flex:none;margin:0}
+.chk input:checked{background:var(--ok);border-color:var(--ok)}
+.chk input:checked:after{content:"✓";color:#fff;font-weight:900;font-size:15px}
+.photo{display:block;margin-top:12px;border:2.5px dashed #E2D2BF;border-radius:20px;background:#fff;min-height:170px;display:grid;place-items:center;text-align:center;color:var(--sub);font-weight:700;cursor:pointer;overflow:hidden}
+.photo img{width:100%;max-height:260px;object-fit:cover;display:block}
+.stepper{display:flex;align-items:center;justify-content:center;gap:22px;margin:18px 0}
+.stepper button{width:56px;height:56px;border-radius:18px;background:#fff;box-shadow:var(--sh);font-size:26px;font-weight:900}
+.stepper b{font-size:40px;min-width:90px;text-align:center}
+.opt{display:block;width:100%;text-align:left;background:#fff;border-radius:16px;padding:14px 16px;margin-top:10px;font-weight:700;box-shadow:var(--sh);border:2.5px solid transparent}
+.opt.right{border-color:var(--ok);background:#E9F8F0}
+.opt.wrong{border-color:var(--warn);background:#FFECEC}
+.row{display:flex;gap:10px;margin-top:16px}
+.field{display:block;margin-top:14px}
+.field span{display:block;font-size:13px;font-weight:800;color:var(--sub);margin-bottom:6px}
+.field input,.field select{width:100%;padding:14px;border-radius:14px;border:2px solid var(--line);background:#fff;outline:none}
+.field input:focus,.field select:focus{border-color:var(--pri2)}
+.seg{display:flex;background:#F2E8DC;border-radius:14px;padding:4px}
+.seg button{flex:1;padding:10px;border-radius:11px;font-weight:800;font-size:14px;color:var(--sub)}
+.seg button.on{background:#fff;color:var(--ink);box-shadow:0 2px 6px rgba(0,0,0,.08)}
+
+/* overlay */
+.ov{position:fixed;inset:0;z-index:70;display:grid;place-items:center;background:radial-gradient(circle at 50% 40%,rgba(255,236,190,.97),rgba(255,190,150,.97));animation:fade .3s;padding:24px;text-align:center}
+.ov .inner{max-width:360px}
+.ov h2{font-size:26px;margin:10px 0 6px}
+.ov .pet{width:220px;height:220px;margin:0 auto;position:relative}
+.ov .pet svg{width:100%;height:100%;overflow:visible}
+.ov .rays{position:absolute;inset:-50px;background:repeating-conic-gradient(rgba(255,255,255,.55) 0 10deg,transparent 10deg 24deg);border-radius:50%;animation:spin 12s linear infinite;-webkit-mask:radial-gradient(circle,#000 30%,transparent 70%);mask:radial-gradient(circle,#000 30%,transparent 70%)}
+@keyframes spin{to{transform:rotate(360deg)}}
+.ov .flash{animation:flash 1.6s ease-out}
+@keyframes flash{0%{filter:brightness(4) saturate(0)}60%{filter:brightness(2.2) saturate(.3)}100%{filter:none}}
+.confetti{position:fixed;top:-20px;width:10px;height:14px;z-index:71;border-radius:3px;animation:fall linear forwards;pointer-events:none}
+@keyframes fall{to{transform:translateY(110vh) rotate(720deg)}}
+
+/* toast */
+.toasts{position:fixed;top:calc(68px + env(safe-area-inset-top));left:50%;transform:translateX(-50%);z-index:80;display:flex;flex-direction:column;align-items:center;gap:8px;width:calc(100% - 32px);max-width:440px;pointer-events:none}
+.toast{background:rgba(58,46,74,.94);color:#fff;padding:11px 16px;border-radius:16px;font-weight:700;font-size:14px;box-shadow:0 10px 24px rgba(0,0,0,.18);animation:tin .3s,tout .3s 2.4s forwards;text-align:center}
+.toast.gold{background:linear-gradient(135deg,#FFB547,#FF7A59)}
+@keyframes tin{from{opacity:0;transform:translateY(-12px)}}
+@keyframes tout{to{opacity:0;transform:translateY(-12px)}}
+
+/* store */
+.plaza{position:relative;border-radius:28px;overflow:hidden;background:linear-gradient(#CFEAFF 0 38%,#BFE6B5 38%);box-shadow:var(--sh);padding:62px 10px 14px;margin-top:12px}
+.plaza .sign{position:absolute;top:14px;left:50%;transform:translateX(-50%);background:#fff;border-radius:14px;padding:6px 14px;font-weight:900;font-size:14px;box-shadow:var(--sh);white-space:nowrap}
+.plaza .grid{display:grid;grid-template-columns:repeat(3,1fr);gap:6px}
+.mate{text-align:center;cursor:pointer;padding:4px 0 8px;border-radius:18px;transition:background .2s}
+.mate:active{background:rgba(255,255,255,.4)}
+.mate .p{width:84px;height:84px;margin:0 auto}
+.mate .p svg{width:100%;height:100%;overflow:visible}
+.mate .n{font-size:12px;font-weight:900;background:rgba(255,255,255,.9);display:inline-block;padding:2px 9px;border-radius:999px;margin-top:-4px}
+.mate .s{font-size:10px;font-weight:800;color:#4D7A45;margin-top:3px}
+.mate.me .n{background:var(--pri);color:#fff}
+.lb{display:flex;align-items:center;gap:12px;padding:10px 4px;border-bottom:1px solid var(--line)}
+.lb:last-child{border:0}
+.lb .rk{width:28px;height:28px;border-radius:10px;display:grid;place-items:center;font-weight:900;font-size:13px;background:#F4ECE2}
+.lb.top1 .rk{background:#FFD45C}.lb.top2 .rk{background:#E3E6EE}.lb.top3 .rk{background:#F5C9A3}
+.lb .nm{flex:1;font-weight:800;font-size:14px}
+.lb.mine{background:#FFF1E8;border-radius:14px;padding:10px}
+.lb .pc{font-weight:900;color:var(--pri)}
+
+/* claw machine */
+.cm{background:linear-gradient(160deg,#FF8F70,#FF6FA0);border-radius:30px;padding:12px;box-shadow:0 12px 30px rgba(255,111,130,.35);margin-top:12px}
+.cm-top{display:flex;align-items:center;justify-content:center;gap:8px;color:#fff;font-weight:900;font-size:17px;letter-spacing:2px;padding:4px 0 10px}
+.cm-top .lights{display:flex;gap:6px}
+.cm-top .lights i{width:8px;height:8px;border-radius:50%;background:#FFF3A0;animation:bulb 1s infinite}
+.cm-top .lights i:nth-child(2n){animation-delay:.5s}
+.glass{position:relative;height:240px;border-radius:20px;background:linear-gradient(#E9F6FF,#D3ECFF);overflow:hidden;border:4px solid rgba(255,255,255,.75)}
+.glass:before{content:"";position:absolute;top:0;left:12%;width:16%;height:100%;background:linear-gradient(90deg,transparent,rgba(255,255,255,.55),transparent);transform:skewX(-14deg);z-index:6;pointer-events:none}
+.rail{position:absolute;top:10px;left:6px;right:6px;height:6px;border-radius:6px;background:#9BB3CC}
+.claw{position:absolute;top:10px;width:46px;margin-left:-23px;z-index:4;display:flex;flex-direction:column;align-items:center}
+.claw .cable{width:3px;background:#7F93A8;height:0}
+.claw svg{width:46px;height:40px;margin-top:-2px}
+.claw .held{position:absolute;bottom:-26px;font-size:30px}
+.prize{position:absolute;bottom:12px;width:44px;height:44px;margin-left:-22px;border-radius:50%;display:grid;place-items:center;font-size:24px;box-shadow:inset 0 -6px 0 rgba(0,0,0,.08),0 3px 6px rgba(0,0,0,.08);transition:transform .3s}
+.prize.wig{animation:wig .4s}
+@keyframes wig{25%{transform:rotate(-14deg)}75%{transform:rotate(14deg)}}
+.chute{position:absolute;left:0;bottom:0;width:62px;height:64px;background:rgba(255,255,255,.6);border-radius:0 18px 0 0;border:3px solid rgba(255,255,255,.9);border-left:0;border-bottom:0;z-index:5;display:grid;place-items:center;font-size:11px;font-weight:900;color:#7F93A8}
+.cm-panel{display:flex;align-items:center;gap:10px;margin-top:12px}
+.cm-panel .info{flex:1;color:#fff;font-weight:800;font-size:13px;line-height:1.4}
+.cm-btn{width:84px;height:84px;border-radius:50%;background:radial-gradient(circle at 35% 30%,#FFF27A,#FFC21A);box-shadow:0 7px 0 #D69A00,0 10px 18px rgba(0,0,0,.2);font-weight:900;font-size:16px;color:#7A4A00;transition:transform .08s,box-shadow .08s}
+.cm-btn:active{transform:translateY(5px);box-shadow:0 2px 0 #D69A00}
+.cm-btn:disabled{filter:grayscale(.6);opacity:.7}
+
+/* shop & dex */
+.shop{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-top:10px}
+.item{background:#fff;border-radius:20px;box-shadow:var(--sh);padding:12px 6px;text-align:center;cursor:pointer;position:relative;border:2.5px solid transparent}
+.item .e{font-size:38px;height:48px;display:grid;place-items:center}
+.item .sw{width:44px;height:44px;border-radius:14px;margin:2px auto;border:3px solid #fff;box-shadow:0 2px 6px rgba(0,0,0,.1)}
+.item .nm{font-size:12px;font-weight:800;margin-top:4px}
+.item .pr{font-size:12px;font-weight:900;color:#C26A2B;margin-top:3px}
+.item.own .pr{color:var(--ok)}
+.item.eq{border-color:var(--pri)}
+.item.eq:after{content:"使用中";position:absolute;top:-8px;right:-4px;font-size:10px;font-weight:900;background:var(--pri);color:#fff;padding:2px 7px;border-radius:8px}
+.tabs{display:flex;gap:8px;margin-top:14px;overflow-x:auto}
+.tabs button{padding:8px 14px;border-radius:999px;font-weight:800;font-size:13px;background:#fff;box-shadow:var(--sh);white-space:nowrap;color:var(--sub)}
+.tabs button.on{background:var(--ink);color:#fff}
+.dex{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-top:10px}
+.dex .d{background:#fff;border-radius:20px;box-shadow:var(--sh);padding:8px 6px 12px;text-align:center;cursor:pointer}
+.dex .d .p{width:86px;height:86px;margin:0 auto}
+.dex .d .p svg{width:100%;height:100%;overflow:visible}
+.dex .d b{display:block;font-size:13px}
+.dex .d span{font-size:10px;font-weight:800;color:var(--sub)}
+.ach{display:flex;align-items:center;gap:12px;padding:12px 2px;border-bottom:1px solid var(--line)}
+.ach:last-child{border:0}
+.ach .ic{width:44px;height:44px;border-radius:15px;display:grid;place-items:center;font-size:22px;background:#F4ECE2;flex:none}
+.ach.got .ic{background:linear-gradient(135deg,#FFE08A,#FFB86B)}
+.ach .tx{flex:1}
+.ach .tx b{font-size:14px}
+.ach .tx div{font-size:12px;color:var(--sub)}
+.ach:not(.got){opacity:.55}
+.attrs{display:grid;gap:8px}
+.attr{display:flex;align-items:center;gap:8px;font-size:12px;font-weight:800}
+.attr .bar{flex:1;height:9px;background:#F3E8DC;border-radius:9px;overflow:hidden}
+.attr .bar i{display:block;height:100%;border-radius:9px}
+
+/* onboarding */
+.onb{min-height:100vh;min-height:100dvh;padding:calc(30px + env(safe-area-inset-top)) 24px 30px;display:flex;flex-direction:column;background:radial-gradient(circle at 50% 18%,#FFE3C4,var(--bg) 60%)}
+.onb .logo{text-align:center;margin-top:10px}
+.onb .logo .p{width:150px;height:150px;margin:0 auto}
+.onb .logo .p svg{width:100%;height:100%;overflow:visible}
+.onb h1{font-size:30px;margin:6px 0 4px;letter-spacing:2px}
+.onb .grow{flex:1}
+</style>
+</head>
+<body>
+<div id="app"></div>
+<div class="mask" id="mask"></div>
+<div class="sheet" id="sheet"></div>
+<div class="toasts" id="toasts"></div>
+
+<script>
+'use strict';
+/* =====================================================================
+   糰糰夥伴 — 門市夥伴電子雞原型
+   架構：
+   1. CONFIG / 靜態資料（任務、型態、道具、成就）
+   2. 資料層 Store（目前 localStorage；之後換成店務系統 API）
+   3. 遊戲邏輯（時間衰減、任務、經驗、進化、連續達成、成就）
+   4. 畫面（各分頁 render 函式）
+   5. 串接接口（URL 參數、postMessage、window.MochiPartner）
+   ===================================================================== */
+
+/* ---------------- 1. CONFIG & DATA ---------------- */
+const CONFIG = {
+  storagePrefix: 'mochi:v1:',
+  parentOrigin: '*',          // 正式掛進店務系統時改成店務系統網域
+  maxLevel: 20,
+  careXpPerDay: 24,
+  clawCost: 20,
+};
+
+const STORES = ['中和K霸店','中和城堡店','中壢旗艦店','台中中平旗艦店','八德城堡店','台中北區城堡店','北港旗艦店','台南航母店','后里旗艦店','員林旗艦店','嘉義航母店','埔里旗艦店','士林店','大甲旗艦店','大連店','大里旗艦店','大雅城堡店','安南城堡店','崛江大統店','左營店','平鎮旗艦店','建興店','彰化旗艦店','惠民城堡店','愛買店','斗六旗艦店','新莊旗艦店','春日店','東興店','板橋旗艦(新埔)店','楠梓店','民雄旗艦店','汐止旗艦店','沙鹿航母店','澎湖旗艦店','礁溪店','竹北店','經國航母店','華夏旗艦店','萬華店','蘆洲店','虎尾旗艦店','豐原旗艦店','頭份店','饒河夜市店','鳳山店','鹿港店','鼓山店'];
+
+const ATTR = {
+  guard:  {name:'守護', icon:'🛡️', color:'var(--guard)',  bg:'#E8F0FF', hex:'#5B8DEF'},
+  mech:   {name:'機械', icon:'⚙️', color:'var(--mech)',   bg:'#FFF2DE', hex:'#F2A23B'},
+  harvest:{name:'豐收', icon:'📦', color:'var(--harvest)',bg:'#E3F6EA', hex:'#36B368'},
+  kind:   {name:'親和', icon:'💖', color:'var(--kind)',   bg:'#FFE8F0', hex:'#F06A9B'},
+  wise:   {name:'智慧', icon:'📘', color:'var(--wise)',   bg:'#EEE8FF', hex:'#8C6CF0'},
+};
+const SHIFTS = {early:'早班', late:'晚班', full:'全日班'};
+
+/* 任務範本：code 是之後對接店務系統的任務代碼 */
+const TASKS = [
+  {code:'OPEN_POWER', title:'開店機台通電檢查', desc:'確認所有機台通電，燈光與音效正常。', attr:'guard', verify:'check', items:['全部機台已通電','燈光／跑馬燈正常','兌幣機可正常運作'], xp:25, food:2, coin:10, core:true, shift:'early'},
+  {code:'CLOSE_COUNT', title:'閉店清點與關機', desc:'完成清點、關閉電源，並確認門窗上鎖。', attr:'guard', verify:'check', items:['營收／代幣清點完成','機台電源已關閉','門窗與鐵捲門已上鎖'], xp:25, food:2, coin:10, core:true, shift:'late'},
+  {code:'CLEAN_GLASS', title:'機台玻璃與台面清潔', desc:'擦拭機台玻璃、按鈕與出獎口，拍一張清潔後的照片。', attr:'mech', verify:'photo', xp:25, food:2, coin:10, core:true, shift:'any'},
+  {code:'RESTOCK_HOT', title:'熱門機台補貨', desc:'為熱門機台補足商品，拍一張補貨後的照片。', attr:'harvest', verify:'photo', xp:25, food:2, coin:10, core:true, shift:'any'},
+  {code:'DAILY_QUIZ', title:'每日一題', desc:'回答一題門市小知識，答對獎勵全拿！', attr:'wise', verify:'quiz', xp:20, food:1, coin:15, shift:'any'},
+  {code:'CLAW_TEST', title:'夾力與出獎口測試', desc:'抽測機台的爪子與出獎口是否順暢。', attr:'mech', verify:'count', target:3, unit:'台', xp:20, food:1, coin:10, shift:'any'},
+  {code:'FAULT_REPORT', title:'故障巡檢回報', desc:'巡視全店機台，故障機台張貼暫停並回報。', attr:'mech', verify:'check', items:['已巡視全部機台','故障機台已張貼暫停（或確認無故障）','已回報主管（若有故障）'], xp:20, food:1, coin:10, shift:'any'},
+  {code:'DISPLAY_PHOTO', title:'商品陳列拍照', desc:'拍下一台你最滿意的陳列，讓大家觀摩！', attr:'harvest', verify:'photo', xp:20, food:1, coin:10, shift:'any'},
+  {code:'STOCK_CHECK', title:'倉庫庫存點檢', desc:'點檢熱門商品庫存，不足時提出需求。', attr:'harvest', verify:'check', items:['熱門商品庫存已點檢','缺貨商品已記錄','需求已提報'], xp:20, food:1, coin:10, shift:'any'},
+  {code:'HELP_GUEST', title:'主動協助顧客', desc:'主動協助顧客：換幣、教學、推薦機台都算。', attr:'kind', verify:'count', target:3, unit:'位', xp:20, food:1, coin:10, shift:'any'},
+  {code:'LINE_PROMO', title:'會員／LINE 好友推廣', desc:'邀請顧客加入會員或 LINE 好友。', attr:'kind', verify:'count', target:2, unit:'位', xp:20, food:1, coin:10, shift:'any'},
+  {code:'FLOOR_PATROL', title:'店內環境巡視', desc:'檢查走道、垃圾桶與休息區是否整潔。', attr:'kind', verify:'check', items:['走道無雜物','垃圾桶已清理','休息區整潔'], xp:20, food:1, coin:10, shift:'any'},
+  {code:'SOP_READ', title:'閱讀今日公告', desc:'閱讀總部今日公告與活動資訊。', attr:'wise', verify:'check', items:['已閱讀今日公告','已了解本週活動內容'], xp:15, food:1, coin:10, shift:'any'},
+  {code:'CHANGE_CHECK', title:'兌幣機零錢確認', desc:'確認兌幣機的零錢與代幣存量充足。', attr:'guard', verify:'check', items:['零錢存量充足','代幣存量充足'], xp:15, food:1, coin:10, shift:'any'},
+];
+const TASK_MAP = Object.fromEntries(TASKS.map(t=>[t.code,t]));
+const CORE = {early:['OPEN_POWER','CLEAN_GLASS','RESTOCK_HOT'], late:['CLEAN_GLASS','RESTOCK_HOT','CLOSE_COUNT'], full:['OPEN_POWER','CLEAN_GLASS','RESTOCK_HOT']};
+
+/* 題庫：正式版請換成公司真實 SOP 內容 */
+const QUIZ = [
+  {q:'清潔機台玻璃時，比較建議的方式是？', a:['用乾布直接用力擦','中性清潔劑搭配超細纖維布','大量噴灑酒精'], ok:1},
+  {q:'顧客反映機台卡幣，第一步應該？', a:['先安撫顧客並確認機台編號與狀況','請顧客改玩別台','直接拍打機台'], ok:0},
+  {q:'補貨時，商品擺放的原則是？', a:['塞越滿越好','隨意堆疊就好','依陳列規範，保持可夾取性與美觀'], ok:2},
+  {q:'閉店前最重要的檢查是？', a:['播放音樂','關閉電源並確認門窗上鎖','整理個人置物櫃'], ok:1},
+  {q:'發現機台故障，應該怎麼做？', a:['張貼暫停使用並立即回報','等明天再處理','自行拆開維修'], ok:0},
+  {q:'顧客詢問會員優惠時，應該？', a:['請顧客自己上網查','介紹加入會員／LINE 好友的優惠','說不清楚'], ok:1},
+  {q:'交班時最好做什麼？', a:['什麼都不說直接下班','交接機台狀況與待辦事項','只交接鑰匙'], ok:1},
+  {q:'看到小朋友想玩但不會操作，可以？', a:['主動上前親切教學','讓他自己摸索','請家長處理'], ok:0},
+];
+
+/* 寵物型態 */
+const FORMS = {
+  egg:      {name:'神秘的蛋', stage:0, color:'#FFF4E0', hint:'一切的起點'},
+  mochi:    {name:'糰糰',     stage:1, color:'#FFE3BF', hint:'完成 3 個任務即可孵化'},
+  c_guard:  {name:'盾盾',     stage:2, attr:'guard',   color:'#A3C0FF', hint:'幼年期多做「守護」任務'},
+  c_mech:   {name:'齒輪仔',   stage:2, attr:'mech',    color:'#FFCD80', hint:'幼年期多做「機械」任務'},
+  c_harvest:{name:'芽芽',     stage:2, attr:'harvest', color:'#A6E5B0', hint:'幼年期多做「豐收」任務'},
+  c_kind:   {name:'心心',     stage:2, attr:'kind',    color:'#FFBBD2', hint:'幼年期多做「親和」任務'},
+  c_wise:   {name:'書書',     stage:2, attr:'wise',    color:'#CFBBFF', hint:'幼年期多做「智慧」任務'},
+  a_guard:  {name:'鐵壁騎士', stage:3, attr:'guard',   color:'#86A9F7', hint:'守護屬性最高時進化'},
+  a_mech:   {name:'機械博士', stage:3, attr:'mech',    color:'#F8BA58', hint:'機械屬性最高時進化'},
+  a_harvest:{name:'豐收之王', stage:3, attr:'harvest', color:'#84D893', hint:'豐收屬性最高時進化'},
+  a_kind:   {name:'暖心天使', stage:3, attr:'kind',    color:'#FFA3C2', hint:'親和屬性最高時進化'},
+  a_wise:   {name:'星空賢者', stage:3, attr:'wise',    color:'#B8A0FF', hint:'智慧屬性最高時進化'},
+  a_rainbow:{name:'彩虹糰',   stage:3, color:'#FFF0A8', hint:'五種屬性平均發展'},
+  a_meteor: {name:'流星糰',   stage:3, color:'#454A8E', hint:'？？？與「毅力」有關'},
+};
+const FORM_ORDER = Object.keys(FORMS);
+
+/* 道具：wallpaper / wall / left / right；claw:true 只能從夾娃娃機取得 */
+const ITEMS = [
+  {id:'wp_cream', name:'奶油壁紙', type:'wallpaper', price:0,   val:'linear-gradient(#FFF1DE,#FFE5C8)'},
+  {id:'wp_mint',  name:'薄荷壁紙', type:'wallpaper', price:120, val:'linear-gradient(#E6F8EF,#CBEEDD)'},
+  {id:'wp_sky',   name:'晴空壁紙', type:'wallpaper', price:120, val:'linear-gradient(#E6F1FF,#CCE0FF)'},
+  {id:'wp_sakura',name:'櫻花壁紙', type:'wallpaper', price:180, val:'radial-gradient(circle at 20% 30%,#FFD6E4 0 6px,transparent 7px) 0 0/48px 48px,linear-gradient(#FFF0F5,#FFDCE8)'},
+  {id:'wp_star',  name:'星夜壁紙', type:'wallpaper', price:260, val:'radial-gradient(circle at 30% 40%,#FFF6C2 0 2px,transparent 3px) 0 0/36px 36px,linear-gradient(#5560A8,#3A3F7A)'},
+  {id:'frame',  name:'畫框',     type:'wall',  price:80,  e:'🖼️'},
+  {id:'clock',  name:'時鐘',     type:'wall',  price:100, e:'🕰️'},
+  {id:'carp',   name:'鯉魚旗',   type:'wall',  price:150, e:'🎏'},
+  {id:'plant',  name:'盆栽',     type:'left',  price:60,  e:'🪴'},
+  {id:'sofa',   name:'小沙發',   type:'left',  price:200, e:'🛋️'},
+  {id:'game',   name:'遊戲機',   type:'left',  price:220, e:'🕹️'},
+  {id:'bear',   name:'小熊玩偶', type:'right', price:90,  e:'🧸'},
+  {id:'balloon',name:'氣球',     type:'right', price:70,  e:'🎈'},
+  {id:'cake',   name:'蛋糕',     type:'right', price:130, e:'🎂'},
+  {id:'unicorn',name:'獨角獸',   type:'right', claw:true, e:'🦄'},
+  {id:'disco',  name:'迪斯可球', type:'wall',  claw:true, e:'🪩'},
+  {id:'crown',  name:'小皇冠',   type:'left',  claw:true, e:'👑'},
+  {id:'flag',   name:'門市旗幟', type:'flag',  team:true, e:'🚩'},
+];
+const ITEM_MAP = Object.fromEntries(ITEMS.map(i=>[i.id,i]));
+
+const ACH = [
+  {id:'first', icon:'🌱', name:'第一步',   desc:'完成第 1 個任務',          title:'新手夥伴',   test:s=>s.totalTasks>=1},
+  {id:'hatch', icon:'🐣', name:'破殼而出', desc:'孵化你的寵物',             title:'糰糰家長',   test:s=>s.seen.includes('mochi')},
+  {id:'s3',    icon:'🔥', name:'三日不懈', desc:'連續 3 天完成核心任務',    title:'持之以恆',   test:s=>s.streak>=3},
+  {id:'s7',    icon:'⭐', name:'一週全勤', desc:'連續 7 天完成核心任務',    title:'全勤之星',   test:s=>s.streak>=7},
+  {id:'s30',   icon:'🌟', name:'月度傳說', desc:'連續 30 天完成核心任務',   title:'傳說夥伴',   test:s=>s.streak>=30},
+  {id:'t50',   icon:'📋', name:'任務達人', desc:'累計完成 50 個任務',       title:'可靠夥伴',   test:s=>s.totalTasks>=50},
+  {id:'t200',  icon:'🏅', name:'門市支柱', desc:'累計完成 200 個任務',      title:'門市支柱',   test:s=>s.totalTasks>=200},
+  {id:'guard', icon:'🛡️', name:'守護者',   desc:'守護屬性累積達 300',       title:'門市守護者', test:s=>s.attrTotal.guard>=300},
+  {id:'mech',  icon:'⚙️', name:'機台醫生', desc:'機械屬性累積達 300',       title:'機台醫生',   test:s=>s.attrTotal.mech>=300},
+  {id:'harvest',icon:'📦',name:'補貨職人', desc:'豐收屬性累積達 300',       title:'補貨職人',   test:s=>s.attrTotal.harvest>=300},
+  {id:'kind',  icon:'💖', name:'服務之星', desc:'親和屬性累積達 300',       title:'服務之星',   test:s=>s.attrTotal.kind>=300},
+  {id:'wise',  icon:'📘', name:'知識王',   desc:'智慧屬性累積達 300',       title:'知識王',     test:s=>s.attrTotal.wise>=300},
+  {id:'claw',  icon:'🎯', name:'夾夾高手', desc:'在夾娃娃機夾到獎品',       title:'夾夾高手',   test:s=>s.clawWins>=1},
+  {id:'cheer', icon:'💪', name:'暖心同事', desc:'為同事打氣 10 次',         title:'暖心同事',   test:s=>s.cheerCount>=10},
+  {id:'dex5',  icon:'📖', name:'收藏家',   desc:'圖鑑收集 5 種型態',        title:'收藏家',     test:s=>s.seen.length>=5},
+  {id:'adult', icon:'🦋', name:'完全體',   desc:'寵物進化為成熟期',         title:'育成大師',   test:s=>s.pet.stage>=3},
+  {id:'grad',  icon:'🎓', name:'光榮畢業', desc:'寵物畢業進入名人堂',       title:'名人堂主人', test:s=>s.hall.length>=1},
+];
+
+const NPC_NAMES = ['小安','阿哲','小米','佳佳','阿凱','小涵','宇宇','小芸','阿德','小柚','阿寶','小晴'];
+const NPC_PETS  = ['麻糬','布丁','湯圓','豆花','芋圓','奶茶','QQ','雪花','黑糖','可可'];
+
+/* ---------------- helpers ---------------- */
+const $ = s => document.querySelector(s);
+const clamp = (v,a=0,b=100) => Math.max(a,Math.min(b,v));
+const pad = n => String(n).padStart(2,'0');
+const dkey = (d=new Date()) => `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}`;
+const mkey = (d=new Date()) => `${d.getFullYear()}-${pad(d.getMonth()+1)}`;
+const daysBetween = (a,b) => Math.round((new Date(b+'T00:00:00') - new Date(a+'T00:00:00'))/864e5);
+function weekStart(d=new Date()){ const x=new Date(d); x.setDate(x.getDate()-((x.getDay()+6)%7)); return dkey(x); }
+const esc = s => String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+function hash(str){ let h=2166136261; for(let i=0;i<str.length;i++){ h^=str.charCodeAt(i); h=Math.imul(h,16777619);} return h>>>0; }
+function rng(seed){ let a=hash(String(seed)); return ()=>{ a|=0; a=a+0x6D2B79F5|0; let t=Math.imul(a^a>>>15,1|a); t=t+Math.imul(t^t>>>7,61|t)^t; return ((t^t>>>14)>>>0)/4294967296; }; }
+function shuffle(arr,r=Math.random){ for(let i=arr.length-1;i>0;i--){ const j=Math.floor(r()*(i+1)); [arr[i],arr[j]]=[arr[j],arr[i]]; } return arr; }
+function shade(hex,amt){ const n=parseInt(hex.slice(1),16); let r=n>>16,g=n>>8&255,b=n&255; const t=amt<0?0:255, p=Math.abs(amt); r=Math.round((t-r)*p+r); g=Math.round((t-g)*p+g); b=Math.round((t-b)*p+b); return '#'+((1<<24)+(r<<16)+(g<<8)+b).toString(16).slice(1); }
+const need = lv => 40 + lv*20;
+const vibrate = ms => { try{ navigator.vibrate && navigator.vibrate(ms); }catch(e){} };
+
+/* ---------------- sound ---------------- */
+let actx=null;
+function beep(notes){
+  if(!S || !S.sound) return;
+  try{
+    actx = actx || new (window.AudioContext||window.webkitAudioContext)();
+    let t = actx.currentTime;
+    notes.forEach(([f,d,type='sine'])=>{
+      const o=actx.createOscillator(), g=actx.createGain();
+      o.type=type; o.frequency.value=f; g.gain.setValueAtTime(.0001,t); g.gain.exponentialRampToValueAtTime(.18,t+.02); g.gain.exponentialRampToValueAtTime(.0001,t+d);
+      o.connect(g).connect(actx.destination); o.start(t); o.stop(t+d+.02); t+=d*.8;
+    });
+  }catch(e){}
+}
+const SFX = {
+  tap:()=>beep([[660,.08]]), ok:()=>beep([[523,.1],[659,.1],[784,.16]]), coin:()=>beep([[988,.07,'square'],[1319,.12,'square']]),
+  level:()=>beep([[523,.12],[659,.12],[784,.12],[1047,.25]]), fail:()=>beep([[330,.15,'triangle'],[247,.25,'triangle']]), pop:()=>beep([[880,.05],[1200,.06]]),
+};
+
+/* ---------------- 2. STORE (資料層) ---------------- */
+const params = new URLSearchParams(location.search);
+let UID = params.get('uid') || localStorage.getItem('mochi:lastUid') || 'local';
+let S = null;
+
+const Store = {
+  key(){ return CONFIG.storagePrefix + UID; },
+  load(){ try{ const raw=localStorage.getItem(this.key()); return raw?JSON.parse(raw):null; }catch(e){ return null; } },
+  save(){ try{ localStorage.setItem(this.key(), JSON.stringify(S)); localStorage.setItem('mochi:lastUid', UID); }catch(e){ console.warn('save failed',e); } },
+};
+const save = () => Store.save();
+
+function newPet(name){
+  return {name, form:'egg', stage:0, level:1, xp:0, attrs:{guard:0,mech:0,harvest:0,kind:0,wise:0},
+    stats:{food:80,fun:80,clean:80,energy:80}, sleeping:false, born:Date.now(), hatch:0, tasks:0};
+}
+function newState(user, petName){
+  return {v:1, user, pet:newPet(petName), food:3, coins:60, streak:0, lastStreakDate:null, protect:2, protectMonth:mkey(),
+    totalTasks:0, attrTotal:{guard:0,mech:0,harvest:0,kind:0,wise:0}, days:{}, week:{}, owned:['wp_cream'],
+    placed:{wallpaper:'wp_cream', wall:null, left:null, right:null, flag:null}, seen:['egg'], ach:{}, title:null,
+    cheers:{}, cheerCount:0, clawWins:0, hall:[], generation:1, care:{date:dkey(), xp:0}, sound:true, lastTick:Date.now(),
+    teamClaimed:{}, lastVisit:dkey()};
+}
+
+/* ---------------- 3. GAME LOGIC ---------------- */
+const fxQueue=[]; let ovOpen=false;
+function queue(fn){ fxQueue.push(fn); }
+function runQueue(){ if(ovOpen || !fxQueue.length) return; fxQueue.shift()(); }
+
+/* 時間衰減：寵物不會死，最低只會到 0 並變得沒精神 */
+function tick(){
+  const now=Date.now(), h=Math.max(0,(now-S.lastTick)/36e5); S.lastTick=now;
+  const p=S.pet; if(p.stage===0 || h<=0) return h;
+  const st=p.stats;
+  st.food=clamp(st.food-5*h); st.fun=clamp(st.fun-4*h); st.clean=clamp(st.clean-3*h);
+  if(p.sleeping){ st.energy=clamp(st.energy+25*h); if(st.energy>=100) p.sleeping=false; }
+  else st.energy=clamp(st.energy-3*h);
+  return h;
+}
+function moodOf(){
+  const p=S.pet; if(p.stage===0) return 'egg'; if(p.sleeping) return 'sleep';
+  const s=p.stats, m=Math.min(s.food,s.fun,s.clean), avg=(s.food+s.fun+s.clean)/3;
+  if(m<25) return 'sad'; if(avg>=80) return 'joy'; if(avg>=55) return 'happy'; return 'normal';
+}
+function needOf(){
+  const p=S.pet; if(p.stage===0||p.sleeping) return null; const s=p.stats;
+  const list=[['food','🍙'],['clean','🫧'],['fun','🎾'],['energy','💤']].filter(([k])=>s[k]<35).sort((a,b)=>s[a[0]]-s[b[0]]);
+  return list.length?list[0][1]:null;
+}
+
+function genTasks(k){
+  const sh=S.user.shift, r=rng(k+'|'+S.user.uid+'|'+sh);
+  const core=CORE[sh];
+  const pool=TASKS.filter(t=>!core.includes(t.code) && t.code!=='DAILY_QUIZ' && (t.shift==='any'||t.shift===sh||sh==='full'));
+  shuffle(pool,r);
+  return [...core,'DAILY_QUIZ',...pool.slice(0, sh==='full'?3:2).map(t=>t.code)];
+}
+function today(){
+  const k=dkey(); let d=S.days[k];
+  if(!d){
+    d=S.days[k]={tasks:genTasks(k).map(code=>({code,done:false,n:0})), chest:false, shift:S.user.shift};
+    const keys=Object.keys(S.days).sort(); while(keys.length>14) delete S.days[keys.shift()];
+    save();
+  }
+  return d;
+}
+const isCore = code => CORE[today().shift||S.user.shift].includes(code);
+function quizToday(){ return QUIZ[hash(dkey()+S.user.uid)%QUIZ.length]; }
+
+function completeTask(code, opt={}){
+  const d=today(), t=d.tasks.find(x=>x.code===code), def=TASK_MAP[code];
+  if(!t || t.done || !def) return false;
+  const m=opt.half?.5:1, xp=Math.round(def.xp*m), food=Math.max(1,Math.round(def.food*m)), coin=Math.round(def.coin*m);
+  t.done=true; t.at=Date.now(); if(opt.photo) t.photo=opt.photo; if(def.verify==='photo') t.pending=true; if(opt.external) t.external=true;
+  S.food+=food; S.coins+=coin; S.totalTasks++; S.pet.tasks++;
+  S.pet.attrs[def.attr]+=xp; S.attrTotal[def.attr]+=xp;
+  const wk=weekStart(); S.week[wk]=(S.week[wk]||0)+1;
+  if(S.pet.stage===0) S.pet.hatch++;
+  addXP(xp);
+  updateStreak();
+  checkAch();
+  save();
+  emit('mochi:taskCompleted',{code, at:t.at, uid:S.user.uid});
+  SFX.ok(); vibrate(20);
+  toast(`完成「${def.title}」 +${xp} 經驗　🍙+${food}　🪙+${coin}`, 'gold');
+  bumpPills();
+  render(); runQueue();
+  return true;
+}
+
+function addXP(n){
+  const p=S.pet; if(p.level>=CONFIG.maxLevel) return;
+  n=Math.round(n*(1+Math.min(.5,(S.generation-1)*.1)));
+  p.xp+=n;
+  while(p.level<CONFIG.maxLevel && p.xp>=need(p.level)){ p.xp-=need(p.level); p.level++; const lv=p.level; queue(()=>levelUp(lv)); }
+  if(p.level>=CONFIG.maxLevel) p.xp=0;
+  checkEvolve();
+}
+function careXP(n){
+  if(S.care.date!==dkey()) S.care={date:dkey(),xp:0};
+  const g=Math.min(n, CONFIG.careXpPerDay-S.care.xp); if(g<=0) return;
+  S.care.xp+=g; addXP(g);
+}
+function dominant(attrs){ return Object.entries(attrs).sort((a,b)=>b[1]-a[1])[0][0]; }
+function adultForm(){
+  if(S.streak>=21) return 'a_meteor';
+  const v=Object.values(S.pet.attrs), mx=Math.max(...v), mn=Math.min(...v);
+  if(mn>0 && (mx-mn)/mx<.3) return 'a_rainbow';
+  return 'a_'+dominant(S.pet.attrs);
+}
+function checkEvolve(){
+  const p=S.pet; let to=null;
+  if(p.stage===0 && p.hatch>=3) to='mochi';
+  else if(p.stage===1 && p.level>=5) to='c_'+dominant(p.attrs);
+  else if(p.stage===2 && p.level>=12) to=adultForm();
+  if(!to) return;
+  const from=p.form; p.form=to; p.stage=FORMS[to].stage;
+  if(p.stage===1){ p.stats={food:75,fun:85,clean:90,energy:90}; S.lastTick=Date.now(); }
+  if(!S.seen.includes(to)) S.seen.push(to);
+  fxQueue.unshift(()=>evolveFx(from,to));
+  checkEvolve();
+}
+function updateStreak(){
+  const d=today(), k=dkey();
+  const coreDone=d.tasks.filter(t=>isCore(t.code)).every(t=>t.done);
+  if(!coreDone || S.lastStreakDate===k) return;
+  if(!S.lastStreakDate) S.streak=1;
+  else{
+    const miss=daysBetween(S.lastStreakDate,k)-1;
+    if(miss<=0) S.streak++;
+    else if(miss<=S.protect){ S.protect-=miss; S.streak++; toast(`🛡️ 使用 ${miss} 張休假保護卡，連續紀錄保住了！`); }
+    else S.streak=1;
+  }
+  S.lastStreakDate=k;
+  if(S.streak>1) toast(`🔥 連續 ${S.streak} 天完成核心任務！`);
+}
+function dailyRollover(){
+  if(S.protectMonth!==mkey()){ S.protectMonth=mkey(); S.protect=2; }
+  if(S.lastStreakDate){ const miss=daysBetween(S.lastStreakDate,dkey())-1; if(miss>S.protect) S.streak=0; }
+}
+function checkAch(){
+  ACH.forEach(a=>{
+    if(S.ach[a.id] || !a.test(S)) return;
+    S.ach[a.id]=Date.now(); S.coins+=30;
+    if(!S.title) S.title=a.title;
+    queue(()=>{ toast(`🏆 成就達成「${a.name}」　獲得稱號「${a.title}」　🪙+30`,'gold'); SFX.level(); runQueueLater(); });
+  });
+}
+function runQueueLater(){ setTimeout(runQueue,600); }
+
+/* ---------------- 照顧動作 ---------------- */
+let transientMood=null;
+const LINES = {
+  any:['今天也一起加油！','有你在真好～','摸摸頭好舒服','機台亮晶晶，我好開心！','要記得喝水喔','一起變得更厲害吧！'],
+  morning:['早安！開店囉～','今天的第一個任務是什麼呢？'],
+  night:['晚班辛苦了！','回家路上要小心喔'],
+  sad:['肚子有點餓…','想要洗香香…','陪我玩一下好嗎？'],
+};
+function say(text){
+  const el=$('#speech'); if(!el) return;
+  if(!text){ const h=new Date().getHours(); const m=moodOf(); const pool=m==='sad'?LINES.sad:[...LINES.any,...(h<12?LINES.morning:h>=18?LINES.night:[])]; text=pool[Math.floor(Math.random()*pool.length)]; }
+  el.textContent=text; el.classList.add('on'); clearTimeout(say.t); say.t=setTimeout(()=>el.classList.remove('on'),2200);
+}
+function fx(emoji, n=1, spread=60){
+  const room=$('.room'); if(!room) return;
+  for(let i=0;i<n;i++){ const e=document.createElement('div'); e.className='fx'; e.textContent=emoji;
+    e.style.left=`calc(50% + ${(Math.random()-.5)*spread*2}px)`; e.style.bottom=`${120+Math.random()*60}px`; e.style.animationDelay=`${i*.12}s`;
+    room.appendChild(e); setTimeout(()=>e.remove(),1600+i*120); }
+}
+function petAnim(cls,ms=700){ const w=$('#petWrap'); if(!w) return; w.classList.remove(cls); void w.offsetWidth; w.classList.add(cls); setTimeout(()=>w.classList.remove(cls),ms); }
+function care(kind){
+  const p=S.pet, st=p.stats; tick();
+  if(p.stage===0){ toast('還是一顆蛋喔，先去完成任務讓牠孵化吧！'); return; }
+  if(p.sleeping && kind!=='sleep'){ toast('噓…牠正在睡覺，先叫醒牠吧'); return; }
+  if(kind==='feed'){
+    if(S.food<=0){ toast('飼料用完了！完成任務可以獲得 🍙'); SFX.fail(); return; }
+    if(st.food>=96){ say('吃不下了啦～'); return; }
+    S.food--; st.food=clamp(st.food+28); careXP(3); transientMood='eat'; renderPet(); petAnim('eat',1100); fx('🍙'); say('好好吃！'); SFX.pop();
+    setTimeout(()=>{transientMood=null; renderPet();},1200);
+  }else if(kind==='clean'){
+    if(st.clean>=95){ say('已經很乾淨囉！'); return; }
+    st.clean=100; careXP(3); fx('🫧',6,80); say('洗香香～'); SFX.pop();
+  }else if(kind==='play'){
+    if(st.energy<15){ say('好累…想睡覺'); return; }
+    st.fun=clamp(st.fun+25); st.energy=clamp(st.energy-12); careXP(3); petAnim('jump'); fx('✨',3); say('好好玩！再一次！'); SFX.tap();
+  }else if(kind==='sleep'){
+    p.sleeping=!p.sleeping; SFX.tap();
+  }
+  vibrate(10); save();
+  if(kind==='sleep'){ render(); say(p.sleeping?'晚安…':'早安！精神飽滿！'); } else refreshLight();
+  runQueue();
+}
+
+function refreshLight(){
+  const p=S.pet, pills=document.querySelectorAll('.pill');
+  if(pills.length){ pills[0].textContent='🍙 '+S.food; pills[1].textContent='🪙 '+S.coins; pills[2].textContent='🔥 '+S.streak; }
+  setEl('#shopCoins','textContent','🪙 '+S.coins);
+  const xb=document.querySelector('.xpbar i'); if(xb) xb.style.width=(p.level>=CONFIG.maxLevel?100:Math.round(p.xp/need(p.level)*100))+'%';
+  const lv=document.querySelector('.tb-lv b'); if(lv) lv.textContent='Lv.'+p.level;
+  const st=$('#stats'); if(st){ st.querySelectorAll('.stat').forEach((el,i)=>{ const k=['food','fun','clean','energy'][i]; el.querySelector('.bar i').style.width=Math.round(p.stats[k])+'%'; el.classList.toggle('low',p.stats[k]<30); }); }
+  const bd=document.querySelector('[data-care="feed"] .badge'); if(bd) bd.textContent=S.food;
+  const nd=document.querySelector('.need'), n=needOf(); if(nd){ if(n) nd.textContent=n; else nd.remove(); }
+  if(p.stats.clean>=40) document.querySelectorAll('.dust').forEach(d=>d.remove());
+}
+
+/* ---------------- 4. PET SVG ---------------- */
+function gearPath(cx,cy,r,teeth=8){
+  let d=''; const ro=r, ri=r*.72;
+  for(let i=0;i<teeth*2;i++){ const a=Math.PI*i/teeth, rr=i%2?ri:ro; const a1=a-Math.PI/teeth/2.2, a2=a+Math.PI/teeth/2.2;
+    d+=(i?'L':'M')+(cx+rr*Math.cos(a1)).toFixed(1)+' '+(cy+rr*Math.sin(a1)).toFixed(1)+'L'+(cx+rr*Math.cos(a2)).toFixed(1)+' '+(cy+rr*Math.sin(a2)).toFixed(1); }
+  return d+'Z';
+}
+function faceSVG(mood, eye='#2E2442', hi='#fff'){
+  const cheeks=`<ellipse cx="62" cy="133" rx="10" ry="5.5" fill="#FF8FA3" opacity=".5"/><ellipse cx="138" cy="133" rx="10" ry="5.5" fill="#FF8FA3" opacity=".5"/>`;
+  const openEyes=`<g class="eyes"><ellipse cx="80" cy="117" rx="8.5" ry="10.5" fill="${eye}"/><ellipse cx="120" cy="117" rx="8.5" ry="10.5" fill="${eye}"/><circle cx="83" cy="112.5" r="3.4" fill="${hi}"/><circle cx="123" cy="112.5" r="3.4" fill="${hi}"/><circle cx="77.5" cy="121" r="1.6" fill="${hi}" opacity=".8"/><circle cx="117.5" cy="121" r="1.6" fill="${hi}" opacity=".8"/></g>`;
+  const S2=`stroke="${eye}" stroke-width="3.6" fill="none" stroke-linecap="round"`;
+  switch(mood){
+    case 'joy': return `<path d="M71 119 Q80 107 89 119" ${S2}/><path d="M111 119 Q120 107 129 119" ${S2}/>${cheeks}<path d="M88 131 Q100 150 112 131 Z" fill="#8C3B4F"/><path d="M94 140 Q100 136 106 140 Q100 147 94 140Z" fill="#FF8FA3"/>`;
+    case 'happy': return `${openEyes}${cheeks}<path d="M89 132 Q100 146 111 132 Z" fill="#8C3B4F"/>`;
+    case 'sad': return `<path d="M68 101 L86 106" ${S2}/><path d="M132 101 L114 106" ${S2}/><g class="eyes"><ellipse cx="80" cy="118" rx="7" ry="8" fill="${eye}"/><ellipse cx="120" cy="118" rx="7" ry="8" fill="${eye}"/><circle cx="82" cy="115" r="2.6" fill="${hi}"/><circle cx="122" cy="115" r="2.6" fill="${hi}"/></g><path d="M91 140 Q100 132 109 140" ${S2}/><path d="M70 128 q-3 8 0 10 q3 -2 0 -10z" fill="#8FD3FF"/>`;
+    case 'sleep': return `<path d="M71 117 Q80 124 89 117" ${S2}/><path d="M111 117 Q120 124 129 117" ${S2}/>${cheeks}<ellipse cx="100" cy="137" rx="4" ry="3" fill="#8C3B4F"/>`;
+    case 'eat': return `${openEyes}${cheeks}<ellipse cx="100" cy="137" rx="10" ry="9" fill="#8C3B4F"/>`;
+    default: return `${openEyes}${cheeks}<path d="M92 134 Q100 141 108 134" ${S2}/>`;
+  }
+}
+function eggSVG(hatch=0, sil=false){
+  const c=sil?'#ddd':'#FFF6E6', dk=sil?'#ccc':'#E9CFA6';
+  const cracks = hatch>=1 ? `<path d="M74 112 l10 8 l8 -10 l9 9" stroke="#B08A5A" stroke-width="3" fill="none" stroke-linejoin="round"/>`:'';
+  const cracks2 = hatch>=2 ? `<path d="M110 92 l8 10 l10 -6 l6 10" stroke="#B08A5A" stroke-width="3" fill="none" stroke-linejoin="round"/>`:'';
+  return `<svg viewBox="0 0 200 200" class="pet-svg egg"><ellipse cx="100" cy="188" rx="46" ry="7" fill="rgba(0,0,0,.12)"/><g class="body">
+    <path d="M100 38 C138 38 160 104 160 138 C160 170 134 188 100 188 C66 188 40 170 40 138 C40 104 62 38 100 38Z" fill="${c}" stroke="${dk}" stroke-width="4"/>
+    ${sil?'':`<circle cx="76" cy="150" r="11" fill="#FFD3B5"/><circle cx="126" cy="128" r="8" fill="#C8E6FF"/><circle cx="110" cy="166" r="6" fill="#D9F2C9"/><circle cx="84" cy="88" r="7" fill="#F8D3FF"/><ellipse cx="78" cy="70" rx="12" ry="7" fill="#fff" opacity=".7" transform="rotate(-30 78 70)"/>`}
+    ${cracks}${cracks2}</g></svg>`;
+}
+function petSVG(id, o={}){
+  const f=FORMS[id]||FORMS.mochi, sil=!!o.sil, mood=o.mood||'happy';
+  if(id==='egg') return eggSVG(o.hatch||0, sil);
+  const c=sil?'#D8D2E2':f.color, dk=sil?'#C2BBD0':shade(f.color,-.3), lt=sil?'#D8D2E2':shade(f.color,.5);
+  const sc=f.stage===1?.78:f.stage===2?.9:1;
+  const at=f.attr, adult=f.stage===3;
+  let back='', top='', side='';
+  const SK=(col)=>`stroke="${col}" stroke-width="3.5" stroke-linejoin="round"`;
+  if(!sil){
+    if(at==='guard'){
+      top+=`<path d="M56 92 Q58 50 100 48 Q142 50 144 92 Q122 80 100 80 Q78 80 56 92Z" fill="#D4DCEC" ${SK('#8E9AB4')}/><path d="M100 48 L100 80" stroke="#8E9AB4" stroke-width="3"/>`;
+      if(adult){ top+=`<path d="M100 50 Q112 22 136 26 Q122 36 112 56Z" fill="#FF6B6B" ${SK('#D04848')}/>`;
+        side+=`<path d="M146 122 L176 122 L176 146 Q161 166 146 146Z" fill="#5B7FD6" ${SK('#33509A')}/><path d="M161 128 L161 152 M151 138 L171 138" stroke="#FFD45C" stroke-width="4" stroke-linecap="round"/>`; }
+    }else if(at==='mech'){
+      top+=`<path d="M100 64 L100 36" stroke="${dk}" stroke-width="4"/><circle cx="100" cy="32" r="7.5" fill="#FF6B6B" class="bulb"/>`;
+      if(adult){ top+=`<path d="M60 88 Q100 72 140 88" stroke="#6B5B4B" stroke-width="5" fill="none"/><circle cx="80" cy="84" r="12" fill="#9FDCFF" stroke="#6B5B4B" stroke-width="4"/><circle cx="120" cy="84" r="12" fill="#9FDCFF" stroke="#6B5B4B" stroke-width="4"/><circle cx="76" cy="80" r="3.5" fill="#fff"/><circle cx="116" cy="80" r="3.5" fill="#fff"/>`;
+        side+=`<path d="${gearPath(166,150,16,8)}" fill="#B8C2D1" ${SK('#7D8798')}/><circle cx="166" cy="150" r="5.5" fill="#7D8798"/>`; }
+      else side+=`<path d="${gearPath(150,92,11,7)}" fill="#B8C2D1" ${SK('#7D8798')}/>`;
+    }else if(at==='harvest'){
+      top+=`<path d="M100 66 Q97 52 100 40" stroke="#3E9B4F" stroke-width="4" fill="none"/><path d="M100 46 Q82 28 70 42 Q86 54 100 46Z" fill="#5CC16E" ${SK('#3E9B4F')}/><path d="M100 43 Q118 24 132 38 Q116 50 100 43Z" fill="#7AD68A" ${SK('#3E9B4F')}/>`;
+      if(adult){ [[62,82],[78,66],[122,66],[138,82]].forEach(([x,y],i)=>{ const col=['#FF8FB1','#FFD45C','#FF9E6E','#B9A3FF'][i]; top+=`<g><circle cx="${x-5}" cy="${y}" r="5" fill="${col}"/><circle cx="${x+5}" cy="${y}" r="5" fill="${col}"/><circle cx="${x}" cy="${y-5}" r="5" fill="${col}"/><circle cx="${x}" cy="${y+5}" r="5" fill="${col}"/><circle cx="${x}" cy="${y}" r="4" fill="#FFF3A0"/></g>`; });
+        side+=`<rect x="148" y="134" width="30" height="24" rx="5" fill="#E2A86B" ${SK('#A86F37')}/><path d="M148 144 L178 144" stroke="#A86F37" stroke-width="3"/><circle cx="156" cy="132" r="6" fill="#FF6B6B"/><circle cx="169" cy="131" r="6" fill="#FFB547"/>`; }
+    }else if(at==='kind'){
+      back+=`<ellipse cx="70" cy="62" rx="12" ry="27" fill="${c}" ${SK(dk)} transform="rotate(-16 70 62)"/><ellipse cx="70" cy="64" rx="5" ry="16" fill="#FF9FBE" transform="rotate(-16 70 64)"/><ellipse cx="130" cy="62" rx="12" ry="27" fill="${c}" ${SK(dk)} transform="rotate(16 130 62)"/><ellipse cx="130" cy="64" rx="5" ry="16" fill="#FF9FBE" transform="rotate(16 130 64)"/>`;
+      side+=`<path d="M100 166 C92 156 84 160 86 168 C88 174 100 180 100 180 C100 180 112 174 114 168 C116 160 108 156 100 166Z" fill="#FF6B9A"/>`;
+      if(adult){ back=`<path d="M40 120 Q6 92 14 70 Q30 86 50 92 Q20 100 40 120Z" fill="#fff" ${SK('#E5D7F0')}/><path d="M160 120 Q194 92 186 70 Q170 86 150 92 Q180 100 160 120Z" fill="#fff" ${SK('#E5D7F0')}/>`+back+`<ellipse cx="100" cy="26" rx="26" ry="7" fill="none" stroke="#FFD45C" stroke-width="5"/>`; }
+    }else if(at==='wise'){
+      side+=`<circle cx="80" cy="117" r="16" fill="rgba(255,255,255,.25)" stroke="#4A3B6B" stroke-width="3.5"/><circle cx="120" cy="117" r="16" fill="rgba(255,255,255,.25)" stroke="#4A3B6B" stroke-width="3.5"/><path d="M96 115 Q100 111 104 115" stroke="#4A3B6B" stroke-width="3.5" fill="none"/>`;
+      if(adult){ top+=`<path d="M58 84 Q78 76 102 12 Q118 50 144 84 Z" fill="#5B4AA8" ${SK('#3B2F78')}/><ellipse cx="100" cy="84" rx="50" ry="9" fill="#6E5BC4" ${SK('#3B2F78')}/><path d="M96 46 l3 7 l7 1 l-5 5 l1 7 l-6 -3 l-6 3 l1 -7 l-5 -5 l7 -1z" fill="#FFD45C" class="star"/><circle cx="118" cy="66" r="3" fill="#FFF3A0" class="star"/>`; }
+      else top+=`<path d="M100 64 L100 44" stroke="${dk}" stroke-width="4"/><path d="M100 30 l4 8 l9 1 l-7 6 l2 9 l-8 -4 l-8 4 l2 -9 l-7 -6 l9 -1z" fill="#FFD45C" class="star"/>`;
+    }else if(id==='a_rainbow'){
+      ['#FF8A8A','#FFC26B','#FFE97A','#8EDB9B','#8CC4FF','#B79CFF'].forEach((col,i)=>{ back+=`<path d="M${28+i*7} 130 A${72-i*7} ${72-i*7} 0 0 1 ${172-i*7} 130" stroke="${col}" stroke-width="7" fill="none" opacity=".9"/>`; });
+      top+=`<path d="M86 60 l6 -12 l8 10 l8 -10 l6 12z" fill="#FFD45C" ${SK('#E0A800')}/>`;
+    }else if(id==='a_meteor'){
+      top+=`<path d="M100 22 l7 15 l16 2 l-12 11 l3 16 l-14 -8 l-14 8 l3 -16 l-12 -11 l16 -2z" fill="#FFE27A" stroke="#FFB800" stroke-width="3" stroke-linejoin="round" class="star"/><path d="M118 40 Q150 30 170 12" stroke="#FFE27A" stroke-width="4" opacity=".6" fill="none" stroke-linecap="round"/>`;
+      side+=[[62,150],[136,96],[146,160],[70,98],[118,170]].map(([x,y])=>`<circle cx="${x}" cy="${y}" r="2.6" fill="#FFF6C9" class="star"/>`).join('');
+    }
+  }
+  const meteor = id==='a_meteor' && !sil;
+  const face = sil ? '' : faceSVG(mood, meteor?'#FFF6C9':'#2E2442', meteor?'#454A8E':'#fff');
+  return `<svg viewBox="0 0 200 200" class="pet-svg ${mood}">
+  <ellipse cx="100" cy="188" rx="${50*sc}" ry="7" fill="rgba(0,0,0,.12)"/>
+  <g transform="translate(100 186) scale(${sc}) translate(-100 -186)"><g class="body">
+    ${back}
+    <ellipse cx="76" cy="182" rx="15" ry="8" fill="${dk}"/><ellipse cx="124" cy="182" rx="15" ry="8" fill="${dk}"/>
+    <ellipse cx="38" cy="140" rx="10" ry="15" fill="${c}" stroke="${dk}" stroke-width="3.5" transform="rotate(24 38 140)"/>
+    <ellipse cx="162" cy="140" rx="10" ry="15" fill="${c}" stroke="${dk}" stroke-width="3.5" transform="rotate(-24 162 140)"/>
+    <path d="M100 62 C146 62 166 100 166 134 C166 168 138 184 100 184 C62 184 34 168 34 134 C34 100 54 62 100 62Z" fill="${c}" stroke="${dk}" stroke-width="4"/>
+    ${sil?'':`<ellipse cx="100" cy="152" rx="40" ry="25" fill="${lt}" opacity=".75"/><ellipse cx="70" cy="86" rx="15" ry="8" fill="#fff" opacity=".5" transform="rotate(-28 70 86)"/>`}
+    ${face}${top}${side}
+  </g></g></svg>`;
+}
+
+/* ---------------- 5. UI helpers ---------------- */
+function toast(msg, cls=''){ const t=document.createElement('div'); t.className='toast '+cls; t.textContent=msg; $('#toasts').appendChild(t); setTimeout(()=>t.remove(),2800); }
+function bumpPills(){ document.querySelectorAll('.pill').forEach(p=>{p.classList.remove('bump'); void p.offsetWidth; p.classList.add('bump');}); }
+function openSheet(html){ const s=$('#sheet'); s.innerHTML='<div class="grip"></div>'+html; $('#mask').classList.add('on'); s.classList.add('on'); }
+function closeSheet(){ $('#mask').classList.remove('on'); $('#sheet').classList.remove('on'); }
+$('#mask').onclick=closeSheet;
+function overlay(html, onClose){
+  ovOpen=true; const o=document.createElement('div'); o.className='ov'; o.innerHTML=`<div class="inner">${html}</div>`; document.body.appendChild(o);
+  const close=()=>{ o.remove(); ovOpen=false; onClose&&onClose(); render(); setTimeout(runQueue,250); };
+  o.querySelectorAll('[data-close]').forEach(b=>b.onclick=close);
+  return o;
+}
+function confetti(n=40){ const cols=['#FF7A59','#FFC94D','#5B8DEF','#36B368','#F06A9B','#8C6CF0'];
+  for(let i=0;i<n;i++){ const c=document.createElement('div'); c.className='confetti'; c.style.left=Math.random()*100+'vw'; c.style.background=cols[i%cols.length];
+    c.style.animationDuration=(1.8+Math.random()*1.6)+'s'; c.style.animationDelay=Math.random()*.5+'s'; document.body.appendChild(c); setTimeout(()=>c.remove(),4000); } }
+function levelUp(lv){
+  SFX.level(); vibrate([20,40,20]);
+  overlay(`<div class="pet"><div class="rays"></div>${petSVG(S.pet.form,{mood:'joy',hatch:S.pet.hatch})}</div><h2>升級！Lv.${lv}</h2><p class="sub">${esc(S.pet.name)} 變得更有精神了</p>${nextGoal()}<button class="btn pri block" data-close style="margin-top:18px">太棒了</button>`);
+}
+function nextGoal(){ const p=S.pet; if(p.stage===1) return `<p class="sub">Lv.5 將進入幼年期（${p.level}/5）</p>`; if(p.stage===2) return `<p class="sub">Lv.12 將進入成熟期（${p.level}/12）</p>`; if(p.level>=CONFIG.maxLevel) return `<p class="sub">已達最高等級，可以舉行畢業典禮了！</p>`; return ''; }
+function evolveFx(from,to){
+  SFX.level(); vibrate([30,60,30,60,60]); confetti(60);
+  const hatch = from==='egg';
+  const o=overlay(`<div class="pet"><div class="rays"></div><div id="evoPet">${petSVG(from,{mood:'happy',hatch:3})}</div></div>
+    <h2 id="evoTitle">${hatch?'蛋好像要裂開了…':'咦？'+esc(S.pet.name)+' 的樣子…'}</h2><p class="sub" id="evoSub">&nbsp;</p>
+    <button class="btn pri block hidden" id="evoBtn" data-close style="margin-top:18px">好可愛！</button>`);
+  setTimeout(()=>{ const ep=o.querySelector('#evoPet'); ep.innerHTML=petSVG(to,{mood:'joy'}); ep.classList.add('flash');
+    o.querySelector('#evoTitle').textContent = hatch?`${S.pet.name} 孵化了！`:`進化成「${FORMS[to].name}」！`;
+    o.querySelector('#evoSub').textContent = hatch?'記得餵食、清潔、陪牠玩喔':`${['','','幼年期','成熟期'][FORMS[to].stage]}・圖鑑已登錄`;
+    o.querySelector('#evoBtn').classList.remove('hidden'); SFX.ok(); }, 1800);
+}
+
+/* ---------------- 6. RENDER ---------------- */
+let TAB='home';
+const ICONS = {
+  home:'<svg viewBox="0 0 24 24"><path d="M3 11l9-7 9 7v9a1 1 0 0 1-1 1h-5v-6H9v6H4a1 1 0 0 1-1-1z"/></svg>',
+  tasks:'<svg viewBox="0 0 24 24"><rect x="4" y="3" width="16" height="18" rx="3"/><path d="M8 8h8M8 12h8M8 16h5"/></svg>',
+  store:'<svg viewBox="0 0 24 24"><path d="M3 9l2-5h14l2 5M4 9v11h16V9M3 9h18M9 20v-6h6v6"/></svg>',
+  park:'<svg viewBox="0 0 24 24"><rect x="5" y="3" width="14" height="18" rx="3"/><path d="M5 14h14M12 3v4M10 7h4l-1 3h-2z"/><circle cx="12" cy="17.5" r="1.3"/></svg>',
+  dex:'<svg viewBox="0 0 24 24"><path d="M4 5a2 2 0 0 1 2-2h13v16H6a2 2 0 0 0-2 2z"/><path d="M4 19V5M9 8h6"/></svg>',
+};
+const TAB_NAMES={home:'寵物',tasks:'任務',store:'門市',park:'樂園',dex:'圖鑑'};
+
+function render(){
+  if(!S){ (params.get('name')&&params.get('store')) ? renderOnboarding(2,{name:params.get('name'),store:params.get('store'),shift:SHIFTS[params.get('shift')]?params.get('shift'):'early'}) : renderOnboarding(); return; }
+  const app=$('#app');
+  const d=today(), left=d.tasks.filter(t=>!t.done).length;
+  const p=S.pet, pct=p.level>=CONFIG.maxLevel?100:Math.round(p.xp/need(p.level)*100);
+  app.innerHTML = `
+  <div class="topbar">
+    <div class="tb-pet">${petSVG(p.form,{mood:'happy',hatch:p.hatch})}</div>
+    <div class="tb-info"><div class="tb-name">${esc(p.name)}</div><div class="tb-lv"><b>Lv.${p.level}</b><div class="xpbar"><i style="width:${pct}%"></i></div></div></div>
+    <div class="pills"><div class="pill">🍙 ${S.food}</div><div class="pill">🪙 ${S.coins}</div><div class="pill">🔥 ${S.streak}</div></div>
+  </div>
+  <div class="page" id="page"></div>
+  <nav class="nav">${Object.keys(TAB_NAMES).map(k=>`<button data-tab="${k}" class="${TAB===k?'on':''}">${ICONS[k]}${TAB_NAMES[k]}${k==='tasks'&&left?'<span class="dot"></span>':''}${k==='tasks'&&!left&&!d.chest?'<span class="dot"></span>':''}</button>`).join('')}</nav>`;
+  app.querySelectorAll('[data-tab]').forEach(b=>b.onclick=()=>{ if(claw.phase==='move'){ cancelAnimationFrame(claw.raf); claw.phase='idle'; S.coins+=CONFIG.clawCost; save(); } TAB=b.dataset.tab; SFX.tap(); render(); window.scrollTo(0,0); });
+  ({home:renderHome,tasks:renderTasks,store:renderStore,park:renderPark,dex:renderDex})[TAB]();
+}
+
+function skyFor(h){
+  if(h>=6&&h<10) return {sky:'linear-gradient(#FFD9A8,#BFE3FF)',orb:'#FFD45C',night:false};
+  if(h>=10&&h<16) return {sky:'linear-gradient(#8FCBFF,#DDF1FF)',orb:'#FFD45C',night:false};
+  if(h>=16&&h<19) return {sky:'linear-gradient(#FFA98A,#C8A2E8)',orb:'#FF9E5E',night:false};
+  return {sky:'linear-gradient(#1F2A5A,#3B4A8A)',orb:'#FFF3C2',night:true};
+}
+function renderPet(){ const w=$('#petWrap'); if(!w) return; w.innerHTML=petSVG(S.pet.form,{mood:transientMood||moodOf(),hatch:S.pet.hatch}); }
+
+function renderHome(){
+  const p=S.pet, st=p.stats, d=today(), done=d.tasks.filter(t=>t.done).length, tot=d.tasks.length;
+  const sk=skyFor(new Date().getHours()), wp=ITEM_MAP[S.placed.wallpaper]?.val;
+  const deco=['wall','left','right','flag'].map(s=>S.placed[s]?`<div class="deco ${s}">${ITEM_MAP[S.placed[s]].e}</div>`:'').join('');
+  const nd=needOf(), egg=p.stage===0;
+  const dust = !egg && st.clean<40 ? `<div class="dust" style="left:30%">💨</div><div class="dust" style="left:64%;animation-delay:1s">💨</div>`:'';
+  const bars=[['food','🍙','飽足','#FFA94D'],['fun','🎾','心情','#F06A9B'],['clean','🫧','清潔','#5BB8EF'],['energy','💤','精力','#8C6CF0']];
+  const grad = p.stage===3 && p.level>=CONFIG.maxLevel;
+  $('#page').innerHTML = `
+  <div class="room ${sk.night?'night':''}" style="--wall:${wp};--sky:${sk.sky}">
+    <div class="window"><div class="orb" style="background:${sk.orb};box-shadow:0 0 16px ${sk.orb}"></div>${sk.night?'':'<div class="cloud"></div>'}</div>
+    <div class="floor"></div><div class="rug"></div>${deco}${dust}
+    <div class="speech" id="speech"></div>
+    ${nd?`<div class="need">${nd}</div>`:''}${p.sleeping?'<div class="zzz">Z z</div>':''}
+    <div class="pet-wrap" id="petWrap"></div>
+  </div>
+  ${egg?`<div class="card" style="text-align:center"><b style="font-size:16px">🥚 蛋裡好像有動靜…</b><p class="sub" style="margin:6px 0 12px">完成 3 個門市任務就能孵化（${p.hatch}/3）</p><div class="prog"><i style="width:${Math.min(100,p.hatch/3*100)}%"></i></div></div>`:`
+  <div class="card"><div class="stats" id="stats">${bars.map(([k,ic,nm,col])=>`<div class="stat ${st[k]<30?'low':''}"><span class="ic">${ic}</span><span style="width:28px">${nm}</span><div class="bar"><i style="width:${Math.round(st[k])}%;background:${col}"></i></div></div>`).join('')}</div>
+    <div class="actions">
+      <button class="act" data-care="feed"><span class="o">🍙</span>餵食<span class="badge">${S.food}</span></button>
+      <button class="act" data-care="clean"><span class="o">🛁</span>清潔</button>
+      <button class="act" data-care="play"><span class="o">🎾</span>玩耍</button>
+      <button class="act" data-care="sleep"><span class="o">${p.sleeping?'☀️':'🌙'}</span>${p.sleeping?'叫醒':'哄睡'}</button>
+    </div></div>`}
+  ${grad?`<div class="card grad cta" id="gradBtn"><div style="font-size:40px">🎓</div><div class="t"><b>可以舉行畢業典禮了！</b><div class="sub">${esc(p.name)} 將進入名人堂，下一代經驗 +10%</div></div><span class="arrow">›</span></div>`:''}
+  <div class="card cta" id="goTasks"><div class="ring" style="--p:${Math.round(done/tot*100)}"><b>${done}/${tot}</b></div>
+    <div class="t"><b>${done===tot?'今日任務全部完成！':'今日門市任務'}</b><div class="sub">${done===tot?(d.chest?'明天見，記得回來照顧牠喔':'還有一個寶箱等你打開 🎁'):`再完成 ${tot-done} 個，${esc(p.name)} 會更有精神`}</div></div><span class="arrow">›</span></div>
+  <div class="card" style="display:flex;align-items:center;gap:12px"><div style="font-size:30px">🏷️</div><div style="flex:1"><div class="sub">目前稱號</div><b>${esc(S.title||'尚未取得')}</b></div><span class="tag">第 ${S.generation} 代</span><button class="gear" id="openSet" aria-label="設定">⚙️</button></div>`;
+  renderPet();
+  $('#petWrap').onclick=()=>{ if(egg){ petAnim('jump'); say('（叩叩…）'); return; } if(p.sleeping){ say('Zzz…'); return; } tick(); p.stats.fun=clamp(p.stats.fun+2); fx('💗',2); petAnim('jump'); say(); careXP(1); save(); refreshLight(); runQueue(); SFX.pop(); vibrate(8); };
+  document.querySelectorAll('[data-care]').forEach(b=>b.onclick=()=>care(b.dataset.care));
+  $('#goTasks').onclick=()=>{ TAB='tasks'; render(); };
+  $('#openSet').onclick=openSettings;
+  if(grad) $('#gradBtn').onclick=graduate;
+}
+
+function renderTasks(){
+  const d=today(), done=d.tasks.filter(t=>t.done).length, tot=d.tasks.length;
+  const core=d.tasks.filter(t=>isCore(t.code)), bonus=d.tasks.filter(t=>!isCore(t.code));
+  const card=t=>{ const def=TASK_MAP[t.code], a=ATTR[def.attr]; const prog = def.verify==='count'&&!t.done&&t.n?` ・ ${t.n}/${def.target}`:'';
+    return `<div class="task ${t.done?'done':''}" data-task="${t.code}">${isCore(t.code)?'<span class="core">核心</span>':''}
+      <div class="ai" style="background:${a.bg}">${a.icon}</div>
+      <div class="tt"><b>${def.title}</b><div class="rw"><span class="chip" style="background:${a.bg};color:${a.hex}">${a.name} +${def.xp}</span><span class="chip">🍙${def.food}</span><span class="chip">🪙${def.coin}</span>${def.verify==='photo'?'<span class="chip" style="background:#EEF3FF;color:#5B7FD6">📷 拍照</span>':''}</div></div>
+      <div class="st">${t.done?(t.pending?'✓ 待確認':'✓ 完成'):'去完成'+prog}</div></div>`; };
+  const date=new Date();
+  $('#page').innerHTML = `
+  <div class="card" style="margin-top:6px"><div style="display:flex;align-items:center;gap:8px"><b style="font-size:18px">${date.getMonth()+1} 月 ${date.getDate()} 日</b><span class="tag">${SHIFTS[d.shift||S.user.shift]}</span><span class="sub" style="margin-left:auto">${done}/${tot} 完成</span></div>
+    <div class="prog" style="margin-top:12px"><i style="width:${done/tot*100}%"></i></div></div>
+  <div class="tsum"><div class="box"><b>🔥 ${S.streak}</b><span>連續達成天數</span></div><div class="box"><b>🛡️ ${S.protect}</b><span>本月休假保護卡</span></div><div class="box"><b>${S.totalTasks}</b><span>累計完成</span></div></div>
+  <div class="h">核心任務<small>全部完成 = 連續天數 +1</small></div>${core.map(card).join('')}
+  <div class="h">加分任務<small>加速成長・決定進化方向</small></div>${bonus.map(card).join('')}
+  ${done===tot&&!d.chest?`<div class="card chest" id="chest"><div class="big">🎁</div><div style="font-weight:900;font-size:17px">今日全部完成！</div><p class="sub">點擊打開每日寶箱</p></div>`:''}
+  ${d.chest?`<div class="card" style="text-align:center"><div style="font-size:34px">✨</div><b>今日寶箱已領取</b><p class="sub">明天會有新的任務等著你</p></div>`:''}
+  <p class="sub" style="text-align:center;margin-top:18px">屬性比例會影響寵物進化成什麼樣子 👀</p>`;
+  document.querySelectorAll('[data-task]').forEach(el=>el.onclick=()=>openTask(el.dataset.task));
+  const c=$('#chest'); if(c) c.onclick=openChest;
+}
+
+function openTask(code){
+  const def=TASK_MAP[code], t=today().tasks.find(x=>x.code===code), a=ATTR[def.attr];
+  const head=`<div style="display:flex;align-items:center;gap:12px"><div class="task" style="margin:0;padding:0;box-shadow:none;background:none"><div class="ai" style="background:${a.bg}">${a.icon}</div></div><div><h3>${def.title}</h3><span class="tag">${a.name}屬性</span> ${isCore(code)?'<span class="tag" style="background:#FFE7DE;color:var(--pri)">核心任務</span>':''}</div></div><p class="sub" style="margin-top:12px;font-size:14px">${def.desc}</p>`;
+  if(t.done){
+    openSheet(head+`<div class="card" style="text-align:center"><div style="font-size:40px">✅</div><b>已完成</b><p class="sub">${new Date(t.at).toLocaleTimeString('zh-TW',{hour:'2-digit',minute:'2-digit'})} 完成${t.pending?'・等待店長確認':''}${t.external?'・由店務系統同步':''}</p>${t.photo?`<img src="${t.photo}" style="width:100%;border-radius:14px;margin-top:8px">`:''}</div><button class="btn block" style="margin-top:14px" id="cls">關閉</button>`);
+    $('#cls').onclick=closeSheet; return;
+  }
+  const finish=(opt)=>{ closeSheet(); setTimeout(()=>completeTask(code,opt),280); };
+  if(def.verify==='check'){
+    openSheet(head+def.items.map(it=>`<label class="chk"><input type="checkbox"><span>${it}</span></label>`).join('')+`<button class="btn pri block" id="doneBtn" disabled style="margin-top:18px">完成任務</button>`);
+    const boxes=[...document.querySelectorAll('#sheet input[type=checkbox]')];
+    boxes.forEach(b=>b.onchange=()=>{ SFX.tap(); vibrate(6); $('#doneBtn').disabled=!boxes.every(x=>x.checked); });
+    $('#doneBtn').onclick=()=>finish({});
+  }else if(def.verify==='photo'){
+    let photo=null;
+    openSheet(head+`<label class="photo"><input type="file" accept="image/*" capture="environment" id="photoIn" hidden><div id="prev">📷<br>點此拍照或選擇照片</div></label><p class="sub" style="text-align:center">照片會送給店長確認</p><button class="btn pri block" id="doneBtn" disabled style="margin-top:12px">上傳並完成</button>`);
+    $('#photoIn').onchange=async e=>{ const f=e.target.files[0]; if(!f) return; try{ photo=await thumb(f); $('#prev').innerHTML=`<img src="${photo}">`; $('#doneBtn').disabled=false; }catch(err){ toast('照片讀取失敗，請再試一次'); } };
+    $('#doneBtn').onclick=()=>finish({photo});
+  }else if(def.verify==='count'){
+    let n=t.n||0;
+    openSheet(head+`<div class="stepper"><button id="minus">−</button><b id="cnt">${n}</b><button id="plus">＋</button></div><p class="sub" style="text-align:center">目標 ${def.target} ${def.unit}</p><button class="btn pri block" id="doneBtn" ${n>=def.target?'':'disabled'} style="margin-top:12px">完成任務</button>`);
+    const upd=()=>{ $('#cnt').textContent=n; $('#doneBtn').disabled=n<def.target; t.n=n; save(); };
+    $('#plus').onclick=()=>{ n=Math.min(def.target,n+1); SFX.tap(); vibrate(6); upd(); };
+    $('#minus').onclick=()=>{ n=Math.max(0,n-1); upd(); };
+    $('#doneBtn').onclick=()=>finish({});
+  }else if(def.verify==='quiz'){
+    const q=quizToday();
+    openSheet(head+`<div class="card"><b style="font-size:16px">Q. ${q.q}</b></div>${q.a.map((x,i)=>`<button class="opt" data-i="${i}">${'ABC'[i]}. ${x}</button>`).join('')}<div id="qres"></div>`);
+    document.querySelectorAll('#sheet .opt').forEach(b=>b.onclick=()=>{
+      const i=+b.dataset.i, right=i===q.ok; document.querySelectorAll('#sheet .opt').forEach(x=>{ x.disabled=true; if(+x.dataset.i===q.ok) x.classList.add('right'); });
+      if(!right) b.classList.add('wrong');
+      right?SFX.ok():SFX.fail();
+      $('#qres').innerHTML=`<p style="text-align:center;font-weight:800;margin-top:14px">${right?'🎉 答對了！獎勵全拿':'差一點！記住正確答案，獎勵減半'}</p><button class="btn pri block" id="doneBtn">領取獎勵</button>`;
+      $('#doneBtn').onclick=()=>finish({half:!right});
+    });
+  }
+}
+function thumb(file){ return new Promise((res,rej)=>{ const img=new Image(), url=URL.createObjectURL(file);
+  img.onload=()=>{ const s=Math.min(1,320/Math.max(img.width,img.height)), c=document.createElement('canvas'); c.width=Math.round(img.width*s); c.height=Math.round(img.height*s); c.getContext('2d').drawImage(img,0,0,c.width,c.height); URL.revokeObjectURL(url); res(c.toDataURL('image/jpeg',.6)); };
+  img.onerror=rej; img.src=url; }); }
+
+function openChest(){
+  const d=today(); if(d.chest) return;
+  const r=Math.random(); const coins=30+Math.floor(Math.random()*21), food=3;
+  let item=null; if(r<.3){ const pool=ITEMS.filter(i=>!i.team && !S.owned.includes(i.id) && (i.claw||i.price<=150)); if(pool.length) item=pool[Math.floor(Math.random()*pool.length)]; }
+  d.chest=true; S.coins+=coins; S.food+=food; if(item) S.owned.push(item.id); save();
+  SFX.level(); confetti(50); vibrate([20,40,40]);
+  overlay(`<div style="font-size:96px;animation:bump .6s">🎁</div><h2>每日寶箱</h2><div class="card" style="display:flex;justify-content:space-around;font-size:22px;font-weight:900"><span>🪙 +${coins}</span><span>🍙 +${food}</span>${item?`<span>${item.e} ${item.name}</span>`:''}</div>${item?'<p class="sub">新擺飾已放入「樂園」的收藏中</p>':''}<button class="btn pri block" data-close style="margin-top:18px">收下</button>`);
+}
+
+/* ---- 門市 ---- */
+function colleagues(){
+  const r=rng('store|'+S.user.store), n=3+Math.floor(r()*3);
+  const names=shuffle(NPC_NAMES.filter(x=>x!==S.user.name),r).slice(0,n), pets=shuffle([...NPC_PETS],r);
+  const prog=clamp((new Date().getHours()+new Date().getMinutes()/60-9)/12,0,1);
+  return names.map((nm,i)=>{
+    const lv=4+Math.floor(r()*14), at=Object.keys(ATTR)[Math.floor(r()*5)];
+    const form = lv>=12 ? (r()<.12?'a_rainbow':'a_'+at) : lv>=5 ? 'c_'+at : 'mochi';
+    const rd=rng(dkey()+S.user.store+nm), total=6, done=Math.min(total,Math.round(total*prog*(.55+rd()*.6)));
+    return {id:'npc'+i, name:nm, pet:pets[i%pets.length], form, level:lv, done, total, streak:Math.floor(r()*20), title:ACH[Math.floor(r()*ACH.length)].title};
+  });
+}
+function renderStore(){
+  const mates=colleagues(), d=today(), myDone=d.tasks.filter(t=>t.done).length;
+  const dow=(new Date().getDay()+6)%7;
+  const goal=(mates.length+1)*30, wk=weekStart();
+  const progress=Math.min(goal, (S.week[wk]||0) + mates.reduce((s,m)=>s+m.done+dow*Math.round(m.total*.8),0));
+  const claimed=S.teamClaimed[wk];
+  const cheered=S.cheers[dkey()]||[];
+  const storeRate=Math.round((myDone+mates.reduce((s,m)=>s+m.done,0))/(d.tasks.length+mates.reduce((s,m)=>s+m.total,0))*100);
+  const r=rng('lb|'+dkey()); const others=shuffle(STORES.filter(s=>s!==S.user.store),r).slice(0,9).map(s=>({s,v:Math.round(clamp(storeRate+(r()-.45)*40,10,100))}));
+  const lb=[...others,{s:S.user.store,v:storeRate,me:true}].sort((a,b)=>b.v-a.v);
+  $('#page').innerHTML = `
+  <div class="plaza"><div class="sign">🏪 ${esc(S.user.store)} 廣場</div><div class="grid">
+    <div class="mate me" data-mate="me"><div class="p">${petSVG(S.pet.form,{mood:moodOf()==='egg'?'happy':moodOf(),hatch:S.pet.hatch})}</div><div class="n">${esc(S.user.name)}（我）</div><div class="s">今日 ${myDone}/${d.tasks.length}</div></div>
+    ${mates.map(m=>`<div class="mate" data-mate="${m.id}"><div class="p">${petSVG(m.form,{mood:m.done>=4?'joy':'happy'})}</div><div class="n">${m.name}</div><div class="s">${cheered.includes(m.id)?'💪 ':''}今日 ${m.done}/${m.total}</div></div>`).join('')}
+  </div></div>
+  <div class="card"><div style="display:flex;align-items:center"><b>🤝 本週團隊挑戰</b><span class="sub" style="margin-left:auto">${progress}/${goal}</span></div>
+    <p class="sub" style="margin:6px 0 10px">全店一起完成 ${goal} 個任務，每人都能獲得「門市旗幟」擺飾 + 🪙100</p>
+    <div class="prog"><i style="width:${progress/goal*100}%"></i></div>
+    ${progress>=goal?(claimed?'<p class="sub" style="text-align:center;margin:10px 0 0">✅ 本週獎勵已領取</p>':'<button class="btn pri block" id="claimTeam" style="margin-top:12px">領取團隊獎勵</button>'):''}</div>
+  <div class="h">今日門市完成率排行<small>依完成率，大小店都公平</small></div>
+  <div class="card" style="padding:8px 12px">${lb.map((x,i)=>`<div class="lb ${i<3?'top'+(i+1):''} ${x.me?'mine':''}"><span class="rk">${i+1}</span><span class="nm">${esc(x.s)}${x.me?'（我們）':''}</span><span class="pc">${x.v}%</span></div>`).join('')}</div>
+  <p class="sub" style="text-align:center;margin-top:14px">＊原型階段同事與排行為模擬資料，串接店務系統後即為真實資料</p>`;
+  document.querySelectorAll('[data-mate]').forEach(el=>el.onclick=()=>openMate(el.dataset.mate,mates));
+  const c=$('#claimTeam'); if(c) c.onclick=()=>{ S.teamClaimed[wk]=true; S.coins+=100; if(!S.owned.includes('flag')) S.owned.push('flag'); S.placed.flag='flag'; save(); SFX.level(); confetti(); toast('🚩 獲得門市旗幟（已擺進小屋）🪙+100','gold'); render(); };
+}
+function openMate(id,mates){
+  if(id==='me'){ TAB='home'; render(); return; }
+  const m=mates.find(x=>x.id===id), cheered=(S.cheers[dkey()]||[]).includes(id);
+  openSheet(`<div style="text-align:center"><div style="width:170px;height:170px;margin:0 auto">${petSVG(m.form,{mood:'joy'})}</div>
+    <h3>${m.name} 的「${m.pet}」</h3><div><span class="tag">Lv.${m.level}</span> <span class="tag">${FORMS[m.form].name}</span> <span class="tag">🏷️ ${m.title}</span></div>
+    <div class="tsum"><div class="box"><b>${m.done}/${m.total}</b><span>今日任務</span></div><div class="box"><b>🔥 ${m.streak}</b><span>連續天數</span></div></div>
+    <button class="btn pri block" id="cheer" style="margin-top:16px" ${cheered?'disabled':''}>${cheered?'今天已經打過氣了 💪':'幫 '+m.name+' 打氣 💪（🪙+5）'}</button></div>`);
+  $('#cheer').onclick=()=>{ const k=dkey(); S.cheers={[k]:[...(S.cheers[k]||[]),id]}; S.cheerCount++; S.coins+=5; checkAch(); save(); SFX.coin(); vibrate(15); toast(`已為 ${m.name} 打氣！🪙+5`); closeSheet(); render(); runQueue(); };
+}
+
+/* ---- 樂園：夾娃娃機 + 商店 ---- */
+let shopCat='wall', claw={busy:false};
+function renderPark(){
+  const cats={wallpaper:'壁紙',wall:'牆面',left:'左側擺飾',right:'右側擺飾',food:'飼料'};
+  const list=shopCat==='food'?[]:ITEMS.filter(i=>i.type===shopCat);
+  $('#page').innerHTML = `
+  <div class="cm"><div class="cm-top"><span class="lights"><i></i><i></i><i></i></span>糰糰夾夾樂<span class="lights"><i></i><i></i><i></i></span></div>
+    <div class="glass" id="glass"><div class="rail"></div>
+      <div class="claw" id="claw" style="left:50%"><div class="cable" id="cable"></div>
+        <svg viewBox="0 0 46 40"><rect x="15" y="0" width="16" height="10" rx="3" fill="#8DA2B8"/><path d="M17 9 Q4 18 9 36" stroke="#8DA2B8" stroke-width="5" fill="none" stroke-linecap="round" id="clawL"/><path d="M29 9 Q42 18 37 36" stroke="#8DA2B8" stroke-width="5" fill="none" stroke-linecap="round" id="clawR"/></svg>
+        <div class="held" id="held"></div></div>
+      <div id="prizes"></div><div class="chute">出口</div></div>
+    <div class="cm-panel"><div class="info" id="cmInfo">每次 🪙${CONFIG.clawCost}<br>看準時機按下按鈕！</div><button class="cm-btn" id="cmBtn">開始</button></div></div>
+  <div class="h">小屋商店<small id="shopCoins">🪙 ${S.coins}</small></div>
+  <div class="tabs">${Object.entries(cats).map(([k,v])=>`<button data-cat="${k}" class="${shopCat===k?'on':''}">${v}</button>`).join('')}</div>
+  <div class="shop">${shopCat==='food'?[[5,30],[12,65],[30,150]].map(([n,pr])=>`<div class="item" data-food="${n}" data-price="${pr}"><div class="e">🍙</div><div class="nm">飼料 ×${n}</div><div class="pr">🪙 ${pr}</div></div>`).join(''):
+    list.map(i=>{ const own=S.owned.includes(i.id), eq=S.placed[i.type]===i.id;
+      return `<div class="item ${own?'own':''} ${eq?'eq':''}" data-item="${i.id}">${i.type==='wallpaper'?`<div class="e"><div class="sw" style="background:${i.val}"></div></div>`:`<div class="e">${i.e}</div>`}<div class="nm">${i.name}</div><div class="pr">${own?(eq?'點擊收起':'點擊擺放'):i.claw?'🎯 夾娃娃限定':i.team?'🤝 團隊獎勵':'🪙 '+i.price}</div></div>`; }).join('')}</div>`;
+  document.querySelectorAll('[data-cat]').forEach(b=>b.onclick=()=>{ shopCat=b.dataset.cat; renderPark(); });
+  document.querySelectorAll('[data-item]').forEach(b=>b.onclick=()=>shopItem(b.dataset.item));
+  document.querySelectorAll('[data-food]').forEach(b=>b.onclick=()=>{ const n=+b.dataset.food, pr=+b.dataset.price; if(S.coins<pr){ toast('金幣不夠喔，完成任務可以賺金幣'); SFX.fail(); return; } S.coins-=pr; S.food+=n; save(); SFX.coin(); toast(`購買飼料 ×${n}`); render(); });
+  setupClaw();
+}
+function shopItem(id){
+  const it=ITEM_MAP[id], own=S.owned.includes(id);
+  if(own){ if(S.placed[it.type]===id){ if(it.type==='wallpaper') return; S.placed[it.type]=null; } else S.placed[it.type]=id; save(); SFX.tap(); renderPark(); toast(S.placed[it.type]===id?`已擺放「${it.name}」，回寵物頁看看吧`:`已收起「${it.name}」`); return; }
+  if(it.claw){ toast('這個只能從夾娃娃機夾到喔！'); return; }
+  if(it.team){ toast('完成本週團隊挑戰即可獲得'); return; }
+  if(S.coins<it.price){ toast('金幣不夠喔，完成任務可以賺金幣'); SFX.fail(); return; }
+  S.coins-=it.price; S.owned.push(id); S.placed[it.type]=id; save(); SFX.coin(); confetti(20); toast(`購買並擺放「${it.name}」！`,'gold'); render();
+}
+const PRIZES=[{k:'food',e:'🍙',bg:'#FFE9CC',w:30},{k:'coin',e:'🪙',bg:'#FFF3B8',w:25},{k:'xp',e:'⭐',bg:'#E7E0FF',w:20},{k:'item',e:'🎁',bg:'#FFD9E6',w:25}];
+function pickPrize(){ let r=Math.random()*100; for(const p of PRIZES){ if((r-=p.w)<0) return p; } return PRIZES[0]; }
+function setupClaw(){
+  const glass=$('#glass'); if(!glass) return;
+  claw={busy:false,phase:'idle',x:50,t:0,raf:null,prizes:[]};
+  const xs=[32,48,64,80]; shuffle(xs);
+  claw.prizes=xs.slice(0,3).map(x=>({x,...pickPrize()}));
+  $('#prizes').innerHTML=claw.prizes.map((p,i)=>`<div class="prize" id="pz${i}" style="left:${p.x}%;background:${p.bg}">${p.e}</div>`).join('');
+  $('#cmBtn').onclick=clawPress;
+}
+function setClaw(x,drop,open=1){ const c=$('#claw'); if(!c) return; c.style.left=x+'%'; $('#cable').style.height=drop+'px';
+  const a=(1-open)*16; $('#clawL').setAttribute('transform',`rotate(${-a} 17 9)`); $('#clawR').setAttribute('transform',`rotate(${a} 29 9)`); }
+const setEl=(sel,prop,val)=>{ const e=$(sel); if(e) e[prop]=val; };
+const tween=(ms,fn)=>new Promise(res=>{ const t0=performance.now(); const f=t=>{ const k=Math.min(1,(t-t0)/ms); fn(k); k<1?requestAnimationFrame(f):res(); }; requestAnimationFrame(f); });
+function clawPress(){
+  const btn=$('#cmBtn');
+  if(claw.phase==='idle'){
+    if(S.coins<CONFIG.clawCost){ toast('金幣不夠喔！完成任務可以賺金幣'); SFX.fail(); return; }
+    S.coins-=CONFIG.clawCost; save(); bumpPills(); refreshLight();
+    claw.phase='move'; btn.textContent='放！'; $('#cmInfo').innerHTML='爪子移動中…<br>對準獎品按下！'; SFX.coin();
+    const t0=performance.now(), sp=.0016+Math.random()*.0008;
+    const loop=t=>{ if(claw.phase!=='move') return; claw.x=50+38*Math.sin((t-t0)*sp); setClaw(claw.x,0); claw.raf=requestAnimationFrame(loop); };
+    claw.raf=requestAnimationFrame(loop);
+  }else if(claw.phase==='move'){
+    claw.phase='drop'; btn.disabled=true; cancelAnimationFrame(claw.raf); SFX.tap(); vibrate(10); runDrop();
+  }
+}
+async function runDrop(){
+  const x=claw.x, H=($('#glass')?.clientHeight||232)-104;
+  await tween(800,k=>setClaw(x,H*k,1));
+  let best=-1,bd=99; claw.prizes.forEach((p,i)=>{ if(p.got) return; const dd=Math.abs(p.x-x); if(dd<bd){bd=dd;best=i;} });
+  const chance = bd<4?.85:bd<8?.55:bd<11?.2:0;
+  await tween(250,k=>setClaw(x,H,1-k));
+  const win = best>=0 && Math.random()<chance;
+  if(best>=0 && bd<12 && !win){ const el=$('#pz'+best); if(el){ el.classList.add('wig'); setTimeout(()=>el.classList.remove('wig'),450); } }
+  let prize=null;
+  if(win){ prize=claw.prizes[best]; prize.got=true; const pz=$('#pz'+best); if(pz) pz.style.visibility='hidden'; setEl('#held','textContent',prize.e); }
+  await tween(800,k=>setClaw(x,H*(1-k),0));
+  if(win){
+    const sx=x; await tween(700,k=>setClaw(sx+(8-sx)*k,0,0));
+    await tween(200,k=>setClaw(8,0,k)); setEl('#held','textContent','');
+    awardPrize(prize);
+  }else{ SFX.fail(); setEl('#cmInfo','innerHTML','差一點點！<br>再試一次？'); }
+  await tween(500,k=>setClaw((win?8:x)+(50-(win?8:x))*k,0,1));
+  claw.phase='idle'; const btn=$('#cmBtn'); if(btn){ btn.disabled=false; btn.textContent='再玩'; }
+  if(claw.prizes.every(p=>p.got) || win) setTimeout(()=>{ if(TAB==='park'&&claw.phase==='idle') { const keepInfo=$('#cmInfo')?.innerHTML; setupClaw(); setEl('#cmInfo','innerHTML',keepInfo); } },600);
+}
+function awardPrize(p){
+  S.clawWins++; let msg='';
+  if(p.k==='food'){ S.food+=3; msg='🍙 飼料 ×3'; }
+  else if(p.k==='coin'){ S.coins+=40; msg='🪙 金幣 ×40'; }
+  else if(p.k==='xp'){ addXP(30); msg='⭐ 經驗 +30'; }
+  else { const pool=ITEMS.filter(i=>!i.team && !S.owned.includes(i.id) && (i.claw || i.price<=220)); const rare=pool.filter(i=>i.claw);
+    const it=(rare.length&&Math.random()<.5)?rare[Math.floor(Math.random()*rare.length)]:pool[Math.floor(Math.random()*pool.length)];
+    if(it){ S.owned.push(it.id); msg=`${it.e} ${it.name}${it.claw?'（限定！）':''}`; } else { S.coins+=60; msg='🪙 金幣 ×60'; } }
+  checkAch(); save(); SFX.level(); vibrate([20,30,20]); confetti(30);
+  setEl('#cmInfo','innerHTML',`🎉 夾到了！<br>${msg}`); toast('夾到了！'+msg,'gold');
+  refreshLight();
+  setTimeout(runQueue,800);
+}
+
+/* ---- 圖鑑 ---- */
+let dexTab='forms';
+function renderDex(){
+  const tabs={forms:'型態圖鑑',ach:'成就與稱號',hall:'名人堂',me:'我的寵物'};
+  let body='';
+  if(dexTab==='forms'){
+    body=`<p class="sub" style="margin:12px 2px 0">已收集 ${S.seen.length}/${FORM_ORDER.length} 種型態</p><div class="dex">${FORM_ORDER.map(id=>{ const got=S.seen.includes(id), f=FORMS[id];
+      return `<div class="d" data-form="${id}"><div class="p">${petSVG(id,{sil:!got,mood:'happy',hatch:0})}</div><b>${got?f.name:'？？？'}</b><span>${['蛋','孵化期','幼年期','成熟期'][f.stage]}</span></div>`; }).join('')}</div>`;
+  }else if(dexTab==='ach'){
+    body=`<div class="card" style="padding:6px 14px">${ACH.map(a=>{ const got=!!S.ach[a.id]; return `<div class="ach ${got?'got':''}"><div class="ic">${a.icon}</div><div class="tx"><b>${a.name}</b><div>${a.desc}・稱號「${a.title}」</div></div>${got?(S.title===a.title?'<span class="tag" style="background:var(--pri);color:#fff">配戴中</span>':`<button class="tag" data-title="${a.title}">配戴</button>`):'<span class="tag">未達成</span>'}</div>`; }).join('')}</div>`;
+  }else if(dexTab==='hall'){
+    body=S.hall.length?`<div class="dex">${S.hall.map(h=>`<div class="d"><div class="p">${petSVG(h.form,{mood:'joy'})}</div><b>${esc(h.name)}</b><span>第 ${h.gen} 代・${FORMS[h.form].name}</span><span style="display:block">${h.days} 天・${h.tasks} 個任務</span></div>`).join('')}</div>`:
+      `<div class="card" style="text-align:center"><div style="font-size:44px">🎓</div><b>名人堂還空著</b><p class="sub">寵物長到 Lv.${CONFIG.maxLevel} 後可以舉行畢業典禮，留名於此，下一代將獲得經驗加成</p></div>`;
+  }else{
+    const p=S.pet, mx=Math.max(1,...Object.values(p.attrs)), days=Math.max(1,Math.ceil((Date.now()-p.born)/864e5));
+    body=`<div class="card" style="text-align:center"><div style="width:160px;height:160px;margin:0 auto">${petSVG(p.form,{mood:'happy',hatch:p.hatch})}</div><h3 style="margin:4px 0">${esc(p.name)}</h3><span class="tag">${FORMS[p.form].name}</span> <span class="tag">Lv.${p.level}</span> <span class="tag">陪伴第 ${days} 天</span></div>
+      <div class="card"><b>屬性成長</b><p class="sub" style="margin:4px 0 12px">${p.stage<2?'Lv.5 時，最高的屬性決定幼年期型態':p.stage<3?'Lv.12 時，屬性分布決定成熟期型態':'已完成最終進化'}</p><div class="attrs">${Object.entries(ATTR).map(([k,a])=>`<div class="attr"><span style="width:56px">${a.icon} ${a.name}</span><div class="bar"><i style="width:${p.attrs[k]/mx*100}%;background:${a.hex}"></i></div><span style="width:34px;text-align:right">${p.attrs[k]}</span></div>`).join('')}</div></div>`;
+  }
+  $('#page').innerHTML=`<div class="tabs" style="margin-top:6px">${Object.entries(tabs).map(([k,v])=>`<button data-dt="${k}" class="${dexTab===k?'on':''}">${v}</button>`).join('')}</div>${body}`;
+  document.querySelectorAll('[data-dt]').forEach(b=>b.onclick=()=>{ dexTab=b.dataset.dt; renderDex(); });
+  document.querySelectorAll('[data-title]').forEach(b=>b.onclick=()=>{ S.title=b.dataset.title; save(); SFX.tap(); toast(`已配戴稱號「${S.title}」`); renderDex(); });
+  document.querySelectorAll('[data-form]').forEach(b=>b.onclick=()=>{ const f=FORMS[b.dataset.form], got=S.seen.includes(b.dataset.form); toast(got?`${f.name}：${f.hint}`:`提示：${f.hint}`); });
+}
+
+/* ---- 畢業 ---- */
+function graduate(){
+  const p=S.pet;
+  openSheet(`<div style="text-align:center"><div style="font-size:54px">🎓</div><h3>${esc(p.name)} 的畢業典禮</h3><p class="sub">${esc(p.name)} 將以「${FORMS[p.form].name}」的身分進入名人堂。<br>金幣、飼料、擺飾都會保留，下一代經驗值 +10%（最多 +50%）。</p>
+    <label class="field" style="text-align:left"><span>為新的蛋取個名字</span><input id="newName" maxlength="8" placeholder="例如：小糰"></label>
+    <button class="btn pri block" id="doGrad" style="margin-top:16px">舉行畢業典禮</button></div>`);
+  $('#doGrad').onclick=()=>{
+    const nm=($('#newName').value||'').trim()||'小糰';
+    S.hall.push({name:p.name, form:p.form, gen:S.generation, days:Math.max(1,Math.ceil((Date.now()-p.born)/864e5)), tasks:p.tasks});
+    S.generation++; S.pet=newPet(nm); checkAch(); save(); closeSheet(); confetti(80); SFX.level();
+    overlay(`<div class="pet">${eggSVG(0)}</div><h2>新的旅程開始了</h2><p class="sub">${esc(nm)} 是第 ${S.generation} 代，經驗值 +${Math.min(50,(S.generation-1)*10)}%</p><button class="btn pri block" data-close style="margin-top:18px">開始照顧</button>`);
+  };
+}
+
+/* ---- 設定 ---- */
+function openSettings(){
+  openSheet(`<h3>設定</h3>
+    <label class="field"><span>你的名字</span><input id="sName" maxlength="10" value="${esc(S.user.name)}"></label>
+    <label class="field"><span>所屬門市</span><select id="sStore">${STORES.map(s=>`<option ${s===S.user.store?'selected':''}>${s}</option>`).join('')}</select></label>
+    <div class="field"><span>班別（明天起生效）</span><div class="seg" id="sShift">${Object.entries(SHIFTS).map(([k,v])=>`<button data-v="${k}" class="${S.user.shift===k?'on':''}">${v}</button>`).join('')}</div></div>
+    <label class="field"><span>寵物名字</span><input id="sPet" maxlength="8" value="${esc(S.pet.name)}"></label>
+    <label class="chk" style="margin-top:16px"><input type="checkbox" id="sSound" ${S.sound?'checked':''}><span>音效</span></label>
+    <div class="row"><button class="btn block" id="sReset" style="flex:1;color:var(--warn)">重置資料</button><button class="btn pri block" id="sSave" style="flex:2">儲存</button></div>`);
+  let shift=S.user.shift;
+  document.querySelectorAll('#sShift button').forEach(b=>b.onclick=()=>{ shift=b.dataset.v; document.querySelectorAll('#sShift button').forEach(x=>x.classList.toggle('on',x===b)); });
+  $('#sSave').onclick=()=>{ S.user.name=$('#sName').value.trim()||S.user.name; S.user.store=$('#sStore').value; S.user.shift=shift; S.pet.name=$('#sPet').value.trim()||S.pet.name; S.sound=$('#sSound').checked; save(); closeSheet(); toast('已儲存'); render(); };
+  $('#sReset').onclick=()=>{ if(confirm('確定要重置？寵物與所有進度都會消失。')){ localStorage.removeItem(Store.key()); S=null; closeSheet(); render(); } };
+}
+
+/* ---- 新手引導 ---- */
+function renderOnboarding(step=1, draft={}){
+  const app=$('#app');
+  if(step===1){
+    const name=draft.name||params.get('name')||'', store=draft.store||params.get('store')||'', shift=draft.shift||params.get('shift')||'early';
+    app.innerHTML=`<div class="onb"><div class="logo"><div class="p">${petSVG('mochi',{mood:'joy'})}</div><h1>糰糰夥伴</h1><p class="sub">完成門市任務，養大屬於你的夥伴寵物</p></div>
+      <label class="field"><span>你的名字</span><input id="oName" maxlength="10" placeholder="例如：小明" value="${esc(name)}"></label>
+      <label class="field"><span>所屬門市</span><select id="oStore"><option value="">請選擇門市</option>${STORES.map(s=>`<option ${s===store?'selected':''}>${s}</option>`).join('')}</select></label>
+      <div class="field"><span>你的班別</span><div class="seg" id="oShift">${Object.entries(SHIFTS).map(([k,v])=>`<button data-v="${k}" class="${shift===k?'on':''}">${v}</button>`).join('')}</div></div>
+      <div class="grow"></div><button class="btn pri block" id="oNext" style="margin-top:24px">下一步</button></div>`;
+    let sh=shift;
+    document.querySelectorAll('#oShift button').forEach(b=>b.onclick=()=>{ sh=b.dataset.v; document.querySelectorAll('#oShift button').forEach(x=>x.classList.toggle('on',x===b)); });
+    $('#oNext').onclick=()=>{ const n=$('#oName').value.trim(), st=$('#oStore').value; if(!n){ toast('請輸入你的名字'); return; } if(!st){ toast('請選擇門市'); return; } renderOnboarding(2,{name:n,store:st,shift:sh}); };
+  }else{
+    app.innerHTML=`<div class="onb"><div class="logo"><div class="p" style="width:200px;height:200px">${eggSVG(0)}</div><h1 style="font-size:24px">你收到了一顆蛋！</h1><p class="sub">每完成一個門市任務，蛋就會長大一點<br>完成 3 個任務就會孵化</p></div>
+      <label class="field"><span>幫牠取個名字</span><input id="oPet" maxlength="8" placeholder="例如：麻糬"></label>
+      <div class="card" style="font-size:13px;line-height:1.7"><b>小提醒</b><br>・寵物不會死掉，只是會想你 🥺<br>・你做的任務種類，決定牠進化成什麼樣子<br>・全店一起努力，每週還有團隊獎勵</div>
+      <div class="grow"></div><button class="btn pri block" id="oGo" style="margin-top:24px">開始照顧</button></div>`;
+    $('#oGo').onclick=()=>{ const pn=$('#oPet').value.trim()||'麻糬'; if(UID==='local') UID='u'+Date.now().toString(36);
+      S=newState({uid:UID,name:draft.name,store:draft.store,shift:draft.shift},pn); save(); SFX.ok(); TAB='home'; render();
+      setTimeout(()=>toast('到「任務」分頁完成第一個任務吧！'),500); };
+  }
+}
+
+/* ---------------- 7. INTEGRATION (店務系統串接) ---------------- */
+function emit(type,payload){ try{ if(window.parent!==window) window.parent.postMessage({type,...payload},CONFIG.parentOrigin); }catch(e){} }
+window.addEventListener('message',e=>{
+  if(CONFIG.parentOrigin!=='*' && e.origin!==CONFIG.parentOrigin) return;
+  const d=e.data||{}; if(!S) return;
+  if(d.type==='mochi:completeTask' && d.code) completeTask(d.code,{external:true});
+});
+window.MochiPartner = {
+  completeTask: code => completeTask(code,{external:true}),
+  getState: () => JSON.parse(JSON.stringify(S)),
+  todayTasks: () => today().tasks.map(t=>({code:t.code,title:TASK_MAP[t.code].title,done:t.done})),
+};
+
+/* ---------------- BOOT ---------------- */
+function boot(){
+  S=Store.load();
+  if(S && params.get('uid') && S.user.uid!==params.get('uid')) S=null;
+  if(S){
+    if(params.get('name')) S.user.name=params.get('name');
+    if(params.get('store')) S.user.store=params.get('store');
+    const away=tick(); dailyRollover(); today();
+    if(S.pet.stage>0 && away>=20){ S.food+=2; queue(()=>overlay(`<div class="pet">${petSVG(S.pet.form,{mood:'joy'})}</div><h2>歡迎回來！</h2><p class="sub">${esc(S.pet.name)} 好想你～<br>送你回歸禮物 🍙×2</p><button class="btn pri block" data-close style="margin-top:18px">摸摸頭</button>`)); }
+    S.lastVisit=dkey(); save();
+  }
+  render(); setTimeout(runQueue,400);
+  setInterval(()=>{ if(!S) return; const before=moodOf(); tick(); save();
+    if(TAB==='home' && !ovOpen){ const st=$('#stats'); if(st){ const b=st.querySelectorAll('.bar i'); ['food','fun','clean','energy'].forEach((k,i)=>{ b[i].style.width=Math.round(S.pet.stats[k])+'%'; }); } if(before!==moodOf()) renderHome(); }
+  }, 20000);
+  document.addEventListener('visibilitychange',()=>{ if(!document.hidden && S){ tick(); dailyRollover(); render(); } });
+}
+boot();
+</script>
+</body>
+</html>
