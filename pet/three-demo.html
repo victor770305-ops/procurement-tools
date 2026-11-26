@@ -1,0 +1,135 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>3D 牧場測試</title>
+<style>
+html,body{margin:0;height:100%;background:#BFE3FF;overflow:hidden;font-family:-apple-system,"PingFang TC","Noto Sans TC",sans-serif}
+#c{display:block;width:100%;height:100%;touch-action:none}
+.hud{position:fixed;left:12px;top:calc(12px + env(safe-area-inset-top));background:rgba(255,255,255,.88);border-radius:14px;padding:8px 12px;font-size:13px;font-weight:700;color:#3A2E4A;box-shadow:0 4px 14px rgba(0,0,0,.1)}
+.hud small{display:block;font-weight:500;color:#7A6E88}
+</style>
+<!-- three.js r187：放在 vendor/three，用 import map 載入，不需要建置工具 -->
+<script type="importmap">
+{ "imports": { "three": "./vendor/three/three.module.js", "three/addons/": "./vendor/three/addons/" } }
+</script>
+</head>
+<body>
+<canvas id="c"></canvas>
+<div class="hud" id="hud">3D 牧場測試<small>拖曳旋轉・雙指縮放</small></div>
+<script type="module">
+import * as THREE from 'three';
+import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
+
+const canvas = document.getElementById('c');
+const renderer = new THREE.WebGLRenderer({ canvas, antialias: true });
+renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
+renderer.shadowMap.enabled = true;
+renderer.outputColorSpace = THREE.SRGBColorSpace;
+
+const scene = new THREE.Scene();
+scene.background = new THREE.Color('#BFE3FF');
+scene.fog = new THREE.Fog('#BFE3FF', 28, 60);
+
+const camera = new THREE.PerspectiveCamera(45, 1, 0.1, 200);
+camera.position.set(0, 9, 17);
+const controls = new OrbitControls(camera, canvas);
+controls.target.set(0, 2, 0);
+controls.enableDamping = true;
+controls.maxPolarAngle = Math.PI * 0.47;
+controls.minDistance = 8; controls.maxDistance = 30;
+
+// 光
+scene.add(new THREE.HemisphereLight('#FFFFFF', '#8FCB6E', 1.4));
+const sun = new THREE.DirectionalLight('#FFF3D6', 2.2);
+sun.position.set(8, 16, 6); sun.castShadow = true;
+sun.shadow.mapSize.set(1024, 1024);
+Object.assign(sun.shadow.camera, { left: -16, right: 16, top: 16, bottom: -16 });
+scene.add(sun);
+
+// 草地與步道
+const ground = new THREE.Mesh(new THREE.CircleGeometry(24, 64), new THREE.MeshStandardMaterial({ color: '#8FD474' }));
+ground.rotation.x = -Math.PI / 2; ground.receiveShadow = true; scene.add(ground);
+const path = new THREE.Mesh(new THREE.PlaneGeometry(3, 14), new THREE.MeshStandardMaterial({ color: '#F1DDB4' }));
+path.rotation.x = -Math.PI / 2; path.position.set(0, 0.01, 8); path.receiveShadow = true; scene.add(path);
+
+// 中央守護台
+const stone = new THREE.MeshStandardMaterial({ color: '#D9DCE6', roughness: .8 });
+const base = new THREE.Mesh(new THREE.CylinderGeometry(4.2, 4.6, 0.8, 48), stone);
+base.position.y = 0.4; base.castShadow = base.receiveShadow = true; scene.add(base);
+const top = new THREE.Mesh(new THREE.CylinderGeometry(3.4, 3.6, 0.5, 48), new THREE.MeshStandardMaterial({ color: '#FFFFFF', roughness: .6 }));
+top.position.y = 1.05; top.castShadow = top.receiveShadow = true; scene.add(top);
+const ring = new THREE.Mesh(new THREE.TorusGeometry(3.0, 0.08, 8, 64), new THREE.MeshStandardMaterial({ color: '#FFC93C', metalness: .6, roughness: .3, emissive: '#7A5A00' }));
+ring.rotation.x = Math.PI / 2; ring.position.y = 1.32; scene.add(ring);
+
+// 樹
+function tree(x, z, s = 1) {
+  const g = new THREE.Group();
+  const trunk = new THREE.Mesh(new THREE.CylinderGeometry(.18 * s, .26 * s, 1.4 * s, 8), new THREE.MeshStandardMaterial({ color: '#B07A4C' }));
+  trunk.position.y = .7 * s; trunk.castShadow = true; g.add(trunk);
+  const leaf = new THREE.MeshStandardMaterial({ color: '#5DBA55', roughness: .9 });
+  [[0, 2.0, 0, .95], [.55, 1.7, .2, .7], [-.5, 1.75, -.1, .72]].forEach(([dx, dy, dz, r]) => {
+    const b = new THREE.Mesh(new THREE.IcosahedronGeometry(r * s, 1), leaf); b.position.set(dx * s, dy * s, dz * s); b.castShadow = true; g.add(b);
+  });
+  g.position.set(x, 0, z); scene.add(g);
+}
+[[-14, -8], [-9, -13], [12, -11], [16, -4], [-17, 3], [15, 7], [-6, -16], [6, -17]].forEach(([x, z], i) => tree(x, z, 1 + (i % 3) * .25));
+
+// 看板（角色圖永遠面向鏡頭）
+const loader = new THREE.TextureLoader();
+function billboard(url, x, z, h, y = 0) {
+  const tex = loader.load(url, t => {
+    t.colorSpace = THREE.SRGBColorSpace;
+    const w = h * t.image.width / t.image.height;
+    sp.scale.set(w, h, 1);
+  });
+  const sp = new THREE.Sprite(new THREE.SpriteMaterial({ map: tex, transparent: true }));
+  sp.center.set(.5, 0); sp.position.set(x, y, z); scene.add(sp);
+  const shadow = new THREE.Mesh(new THREE.CircleGeometry(h * .32, 24), new THREE.MeshBasicMaterial({ color: '#000', transparent: true, opacity: .14 }));
+  shadow.rotation.x = -Math.PI / 2; shadow.position.set(x, y + .02, z); scene.add(shadow);
+  return sp;
+}
+
+// 店寵：天穹龍（卡片版，掛在守護台上方）
+const card = new THREE.Group();
+const frame = new THREE.Mesh(new THREE.BoxGeometry(5.0, 3.6, .2), new THREE.MeshStandardMaterial({ color: '#FFC93C', metalness: .5, roughness: .35 }));
+card.add(frame);
+loader.load('art/creatures/sp-2-card.jpg', t => {
+  t.colorSpace = THREE.SRGBColorSpace;
+  const ar = t.image.width / t.image.height, h = 3.3, w = h * ar;
+  frame.scale.set((w + .3) / 5.0, (h + .3) / 3.6, 1);
+  const pic = new THREE.Mesh(new THREE.PlaneGeometry(w, h), new THREE.MeshBasicMaterial({ map: t }));
+  pic.position.z = .11; card.add(pic);
+});
+card.position.set(0, 4.2, 0); scene.add(card);
+
+// 個人夥伴（去背角色圖）
+const mates = [['g1', 1, -6, 3], ['m1', 2, 6, 2.5], ['h1', 1, -4, 7], ['k1', 1, 4.5, 6.5], ['w1', 2, -8, -2], ['k2', 1, 8, -1.5]];
+const sprites = mates.map(([id, st, x, z]) => billboard(`art/creatures/${id}-${st}.png`, x, z, st === 1 ? 1.8 : 2.3));
+
+function resize() {
+  const w = innerWidth, h = innerHeight;
+  renderer.setSize(w, h, false); camera.aspect = w / h; camera.updateProjectionMatrix();
+  // 直式畫面比較窄，鏡頭拉遠，讓兩旁的夥伴也看得到
+  const d = camera.aspect < 1 ? 17 / Math.max(camera.aspect, .45) * .62 : 17;
+  camera.position.setLength(Math.hypot(9, d)); controls.maxDistance = Math.max(30, d * 1.6);
+}
+addEventListener('resize', resize); resize();
+
+const timer = new THREE.Timer();
+renderer.setAnimationLoop(time => {
+  timer.update(time);
+  const t = timer.getElapsed();
+  card.position.y = 4.2 + Math.sin(t * 1.2) * .15;
+  card.lookAt(camera.position.x, card.position.y, camera.position.z);
+  sprites.forEach((s, i) => { s.position.y = Math.abs(Math.sin(t * 2 + i)) * .12; });
+  ring.rotation.z = t * .3;
+  controls.update();
+  renderer.render(scene, camera);
+});
+document.getElementById('hud').firstChild.textContent = `3D 牧場測試・three.js r${THREE.REVISION}`;
+window.__threeReady = true;
+</script>
+</body>
+</html>

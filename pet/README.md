@@ -129,3 +129,23 @@ window.addEventListener('message', e => {
 - **月度賽季**：每月一組限定擺飾與賽季任務線。
 - **季節活動**：配合春節、暑假、週年慶推出限定型態。
 - **美術升級**：用 Rive／Spine 製作正式動畫，擺飾換成專屬插畫（目前用 emoji 暫代）。
+
+## three.js（3D 引擎）
+
+- 版本：**r187**（npm 版本號 0.187.0），來源 https://github.com/mrdoob/three.js ，MIT 授權（`pet/vendor/three/LICENSE`）。
+- 位置：`pet/vendor/three/`，內容是 `three.module.js`、`three.core.js`，以及完整的 `addons/`（OrbitControls、GLTFLoader 等）。
+- 載入方式：用 import map，不需要 npm 或建置工具：
+
+```html
+<script type="importmap">
+{ "imports": { "three": "./vendor/three/three.module.js", "three/addons/": "./vendor/three/addons/" } }
+</script>
+<script type="module">
+  import * as THREE from 'three';
+  import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
+</script>
+```
+
+- 更新版本：`bash pet/tools/update-three.sh r188`（從 GitHub 只抓建置檔和 addons）。
+- 測試頁：`pet/three-demo.html`（3D 牧場：守護台、店寵看板、角色看板，可拖曳旋轉）。
+- **注意**：ES module 不能用 `file://` 直接打開，要透過網頁伺服器，例如在 repo 根目錄執行 `python3 -m http.server`，再開 `http://localhost:8000/pet/three-demo.html`。掛進店務系統後就沒有這個問題。
